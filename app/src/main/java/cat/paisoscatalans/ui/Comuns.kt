@@ -1,6 +1,8 @@
 package cat.paisoscatalans.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -164,11 +166,7 @@ fun SelectorArticle(
     val etiqueta = opcions.firstOrNull { it.first == ajustat }?.second ?: "Cap"
     val mostra = nom.trim().ifEmpty { "Maria" }
 
-    androidx.compose.material3.ExposedDropdownMenuBox(
-        expanded = obert,
-        onExpandedChange = { obert = it },
-        modifier = modifier,
-    ) {
+    Box(modifier) {
         androidx.compose.material3.OutlinedTextField(
             value = etiqueta,
             onValueChange = {},
@@ -176,12 +174,24 @@ fun SelectorArticle(
             singleLine = true,
             label = { Text("Article personal") },
             supportingText = { Text("«El mapa ${cat.paisoscatalans.data.Article.genitiu(mostra, ajustat)}»") },
-            trailingIcon = { androidx.compose.material3.ExposedDropdownMenuDefaults.TrailingIcon(expanded = obert) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor(androidx.compose.material3.ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+            trailingIcon = {
+                androidx.compose.material3.Icon(
+                    if (obert) androidx.compose.material.icons.Icons.Filled.ArrowDropUp
+                    else androidx.compose.material.icons.Icons.Filled.ArrowDropDown,
+                    contentDescription = null,
+                )
+            },
+            modifier = Modifier.fillMaxWidth(),
         )
-        ExposedDropdownMenu(expanded = obert, onDismissRequest = { obert = false }) {
+        // Capa transparent per obrir el menú tocant qualsevol punt del camp
+        Box(
+            Modifier
+                .matchParentSize()
+                .padding(bottom = 20.dp)
+                .clip(MaterialTheme.shapes.extraSmall)
+                .clickable(onClickLabel = "Tria l'article") { obert = true },
+        )
+        androidx.compose.material3.DropdownMenu(expanded = obert, onDismissRequest = { obert = false }) {
             opcions.forEach { (clau, text) ->
                 androidx.compose.material3.DropdownMenuItem(
                     text = { Text(text) },
