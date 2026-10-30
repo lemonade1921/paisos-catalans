@@ -34,7 +34,7 @@ Disseny: Material 3 Expressive (Jetpack Compose). Tota l'app és en català.
 Els límits provenen d'**OpenStreetMap** (© col·laboradors d'OpenStreetMap, llicència
 [ODbL](https://opendatacommons.org/licenses/odbl/)). L'script `tools/build_data.py`:
 
-1. Descarrega via Overpass els municipis (`admin_level=8`) de cada territori.
+1. Descarrega els extractes regionals d'OSM de [Geofabrik](https://download.geofabrik.de/) i, amb `osmium`, n'extreu els municipis (`admin_level=8`) de cada territori.
 2. Assigna la comarca de cada municipi:
    - Principat: comarques d'OSM (`admin_level=7`).
    - País Valencià: comarques d'OSM si n'hi ha prou; si no, les categories «Municipis de …» de la Viquipèdia.
@@ -48,7 +48,7 @@ Els límits provenen d'**OpenStreetMap** (© col·laboradors d'OpenStreetMap, ll
 Per generar-les:
 
 ```bash
-pip install -r tools/requirements.txt
+pip install -r tools/requirements.txt   # i osmium-tool (apt / pacman)
 python tools/build_data.py --cache .cache-osm
 ```
 

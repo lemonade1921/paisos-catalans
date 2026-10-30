@@ -8,12 +8,13 @@ Aquest script només s'executa en temps de compilació (a GitHub Actions o al
 teu ordinador) i és l'únic lloc on es fa servir la xarxa.
 
 Fonts:
-  - Geometries i noms: OpenStreetMap via Overpass API (© col·laboradors d'OSM, ODbL)
+  - Geometries i noms: OpenStreetMap, extractes regionals de Geofabrik processats
+    amb osmium-tool (© col·laboradors d'OSM, ODbL)
   - Assignació de comarques on OSM no les té (País Valencià si cal,
     Catalunya Nord): categories de la Viquipèdia en català
   - Vegueries: taula fixa (Llei 30/2010 i modificacions; 8 vegueries)
 
-Ús:
+Ús (cal tenir `osmium` instal·lat: `apt install osmium-tool` o `pacman -S osmium-tool`):
     pip install -r tools/requirements.txt
     python tools/build_data.py            # descarrega i genera
     python tools/build_data.py --cache .cache-osm   # reutilitza descàrregues
@@ -25,25 +26,24 @@ import json
 import math
 import os
 import re
+import shutil
+import subprocess
 import sys
 import time
 import unicodedata
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import date
 
-from shapely.geometry import LineString, MultiPolygon, Point, Polygon
-from shapely.ops import polygonize, unary_union
+from shapely.geometry import MultiPolygon, Point, Polygon, shape
+from shapely.ops import unary_union
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "app", "src", "main", "assets", "geo.json")
 UA = "PaisosCatalansApp-databuilder/1.0 (https://github.com/lemonade1921/paisos-catalans)"
 
-OVERPASS = [
-    "https://overpass-api.de/api/interpreter",
-    "https://overpass.private.coffee/api/interpreter",
-    "https://overpass.kumi.systems/api/interpreter",
-]
+GEOFABRIK = "https://download.geofabrik.de/"
 
 # Tolerància de simplificació (graus). ~0.001° ≈ 100 m: prou per a un mapa de límits.
 TOL_MUNICIPI = 0.0010
@@ -55,32 +55,37 @@ TERRITORIS = [
     {
         "id": "PR",
         "nom": "Principat de Catalunya",
-        "area": '["boundary"="administrative"]["ISO3166-2"="ES-CT"]',
+        "extractes": ["europe/spain/cataluna"],
+        "limit": {"ISO3166-2": "ES-CT"},
         "comarques": "osm",
     },
     {
         "id": "PV",
         "nom": "País Valencià",
-        "area": '["boundary"="administrative"]["ISO3166-2"="ES-VC"]',
+        "extractes": ["europe/spain/valencia"],
+        "limit": {"ISO3166-2": "ES-VC"},
         "comarques": "osm_o_viquipedia",
     },
     {
         "id": "IB",
         "nom": "Illes Balears",
-        "area": '["boundary"="administrative"]["ISO3166-2"="ES-IB"]',
+        "extractes": ["europe/spain/islas-baleares"],
+        "limit": {"ISO3166-2": "ES-IB"},
         "comarques": "illes",
     },
     {
         "id": "CN",
         "nom": "Catalunya Nord",
-        "area": '["boundary"="administrative"]["admin_level"="6"]["ref:INSEE"="66"]',
+        "extractes": ["europe/france/languedoc-roussillon", "europe/france/occitanie", "europe/france"],
+        "limit": {"admin_level": "6", "ref:INSEE": "66"},
         "comarques": "viquipedia",
     },
     {
         "id": "AL",
         "nom": "l'Alguer",
-        "area": '["boundary"="administrative"]["ISO3166-2"="IT-88"]',
-        "municipi_filtre": '["name"="Alghero"]',
+        "extractes": ["europe/italy/isole", "europe/italy"],
+        "limit": None,
+        "municipi_nom": "Alghero",
         "comarques": "unica",
     },
 ]
@@ -179,30 +184,90 @@ def http_get(url: str, data: bytes | None = None, timeout: int = 1000) -> bytes:
         return r.read()
 
 
-def overpass(query: str, cache_dir: str | None, key: str) -> dict:
-    if cache_dir:
-        p = os.path.join(cache_dir, key + ".json")
-        if os.path.exists(p):
-            with open(p, encoding="utf-8") as f:
-                return json.load(f)
-    body = urllib.parse.urlencode({"data": query}).encode()
+def descarrega(url: str, desti: str):
+    """Descarrega un fitxer gran a disc, amb reintents."""
     last = None
-    for intent in range(4):
-        for url in OVERPASS:
+    for intent in range(5):
+        try:
+            log(f"  descarregant {url}")
+            req = urllib.request.Request(url, headers={"User-Agent": UA})
+            tmp = desti + ".part"
+            with urllib.request.urlopen(req, timeout=300) as r, open(tmp, "wb") as f:
+                shutil.copyfileobj(r, f, 1 << 20)
+            os.replace(tmp, desti)
+            log(f"  {os.path.getsize(desti) // (1 << 20)} MB")
+            return
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                raise
+            last = e
+            log(f"    error: {e}")
+            time.sleep(20 * (intent + 1))
+        except Exception as e:  # noqa: BLE001
+            last = e
+            log(f"    error: {e}")
+            time.sleep(20 * (intent + 1))
+    raise RuntimeError(f"No s'ha pogut descarregar {url}: {last}")
+
+
+def limits_administratius(extractes: list[str], cache: str) -> list[tuple[dict, object]]:
+    """
+    Retorna (etiquetes, geometria) de totes les relacions boundary=administrative
+    d'un extracte de Geofabrik (el primer de la llista que existeixi).
+    osmium construeix els multipolígons.
+    """
+    sortida = None
+    for extracte in extractes:
+        nom = extracte.replace("/", "_")
+        sortida = os.path.join(cache, nom + "-limits.geojsonseq")
+        if os.path.exists(sortida):
+            break
+        pbf = os.path.join(cache, nom + ".osm.pbf")
+        if not os.path.exists(pbf):
             try:
-                log(f"  overpass {key} -> {url}")
-                raw = http_get(url, body)
-                data = json.loads(raw)
-                if cache_dir:
-                    os.makedirs(cache_dir, exist_ok=True)
-                    with open(os.path.join(cache_dir, key + ".json"), "w", encoding="utf-8") as f:
-                        json.dump(data, f)
-                return data
-            except Exception as e:  # noqa: BLE001
-                last = e
-                log(f"    error: {e}")
-        time.sleep(30 * (intent + 1))
-    raise RuntimeError(f"Overpass ha fallat per {key}: {last}")
+                descarrega(GEOFABRIK + extracte + "-latest.osm.pbf", pbf)
+            except urllib.error.HTTPError:
+                log(f"  {extracte} no existeix a Geofabrik, provo el següent")
+                sortida = None
+                continue
+        filtrat = os.path.join(cache, nom + "-limits.osm.pbf")
+        subprocess.run(["osmium", "tags-filter", "--overwrite", "-o", filtrat, pbf,
+                        "r/boundary=administrative"], check=True)
+        # Alguns límits que travessen la vora de l'extracte no es poden construir:
+        # osmium ho avisa però continua; per això no exigim codi de sortida 0.
+        subprocess.run(["osmium", "export", "--overwrite", "-f", "geojsonseq",
+                        "--geometry-types=polygon", "--add-unique-id=type_id",
+                        "-o", sortida, filtrat], check=False)
+        if os.path.exists(sortida):
+            break
+    if not sortida or not os.path.exists(sortida):
+        raise RuntimeError(f"No s'han pogut obtenir els límits de {extractes}")
+    extracte = os.path.basename(sortida)
+    out = []
+    with open(sortida, encoding="utf-8") as f:
+        for linia in f:
+            linia = linia.strip().lstrip("\x1e")
+            if not linia:
+                continue
+            feat = json.loads(linia)
+            fid = str(feat.get("id", ""))
+            if not fid.startswith("r"):
+                continue  # només relacions
+            props = feat.get("properties") or {}
+            if props.get("boundary") != "administrative":
+                continue
+            try:
+                g = shape(feat["geometry"])
+                if not g.is_valid:
+                    g = g.buffer(0)
+            except Exception:  # noqa: BLE001
+                continue
+            if g.is_empty:
+                continue
+            props["@id"] = fid
+            out.append((props, g))
+    log(f"  {extracte}: {len(out)} límits administratius")
+    return out
 
 
 def wiki_categoria(titol: str, cache_dir: str | None) -> list[str]:
@@ -239,30 +304,6 @@ def wiki_categoria(titol: str, cache_dir: str | None) -> list[str]:
 
 
 # ---------------------------------------------------------------- geometria
-
-def rel_geom(el: dict):
-    outers, inners = [], []
-    for m in el.get("members", []):
-        if m.get("type") != "way" or "geometry" not in m:
-            continue
-        pts = [(p["lon"], p["lat"]) for p in m["geometry"] if p]
-        if len(pts) < 2:
-            continue
-        (inners if m.get("role") == "inner" else outers).append(LineString(pts))
-    if not outers:
-        return None
-    polys = list(polygonize(unary_union(outers)))
-    if not polys:
-        return None
-    g = unary_union(polys)
-    if inners:
-        holes = list(polygonize(unary_union(inners)))
-        if holes:
-            g = g.difference(unary_union(holes))
-    if not g.is_valid:
-        g = g.buffer(0)
-    return g if not g.is_empty else None
-
 
 def nom_de(tags: dict) -> str:
     if tags.get("name:ca"):
@@ -319,48 +360,40 @@ def codifica(g, tol: float) -> list[list[int]]:
 
 # ---------------------------------------------------------------- procés
 
-def descarrega_territori(t: dict, cache: str | None):
-    area = f'area{t["area"]}->.a;'
-    log(f"[{t['id']}] límit del territori")
-    lim = overpass(f'[out:json][timeout:900];rel{t["area"]};out geom;', cache, f"{t['id']}_limit")
-    lim_geom = unary_union([g for g in (rel_geom(e) for e in lim["elements"]) if g is not None])
+def descarrega_territori(t: dict, cache: str):
+    limits = limits_administratius(t["extractes"], cache)
+    t["_limits"] = limits
+    lim_geom = None
+    if t.get("limit"):
+        cands = [g for tags, g in limits if all(tags.get(k) == v for k, v in t["limit"].items())]
+        if not cands:
+            raise RuntimeError(f"[{t['id']}] no trobo el límit {t['limit']} a l'extracte")
+        lim_geom = unary_union(cands).buffer(0.001)
 
-    log(f"[{t['id']}] municipis")
-    filtre = t.get("municipi_filtre", "")
-    q = (f'[out:json][timeout:900][maxsize:2000000000];{area}'
-         f'rel(area.a)["boundary"="administrative"]["admin_level"="8"]{filtre};out geom;')
-    data = overpass(q, cache, f"{t['id']}_municipis")
     municipis = []
-    for e in data["elements"]:
-        if e.get("type") != "relation":
+    for tags, g in limits:
+        if tags.get("admin_level") != "8":
             continue
-        g = rel_geom(e)
-        if g is None:
+        if t.get("municipi_nom") and t["municipi_nom"] not in (tags.get("name"), tags.get("name:it")):
             continue
         rp = g.representative_point()
-        if not t.get("municipi_filtre") and not lim_geom.buffer(0.001).contains(rp):
-            continue  # municipi veí que toca la frontera
-        tags = e.get("tags", {})
+        if lim_geom is not None and not lim_geom.contains(rp):
+            continue  # municipi veí, fora del territori
         municipis.append({
-            "osm": e["id"], "nom": nom_de(tags), "cand": noms_candidats(tags),
+            "osm": tags["@id"][1:], "nom": nom_de(tags), "cand": noms_candidats(tags),
             "geom": g, "lat": rp.y, "lon": rp.x, "comarca": None,
         })
+    t["_lim_geom"] = lim_geom
     log(f"[{t['id']}] {len(municipis)} municipis")
     return municipis
 
 
-def comarques_osm(t: dict, municipis: list, cache: str | None) -> int:
-    area = f'area{t["area"]}->.a;'
-    q = (f'[out:json][timeout:900];{area}'
-         f'rel(area.a)["boundary"~"^(administrative|political)$"]["admin_level"="7"];out geom;')
-    data = overpass(q, cache, f"{t['id']}_comarques")
-    coms = []
-    for e in data["elements"]:
-        if e.get("type") != "relation":
-            continue
-        g = rel_geom(e)
-        if g is not None:
-            coms.append((sense_article(nom_de(e.get("tags", {}))), g))
+def comarques_osm(t: dict, municipis: list, cache: str) -> int:
+    lim = t.get("_lim_geom")
+    coms = [
+        (sense_article(nom_de(tags)), g) for tags, g in t["_limits"]
+        if tags.get("admin_level") == "7" and (lim is None or lim.contains(g.representative_point()))
+    ]
     log(f"[{t['id']}] {len(coms)} comarques a OSM")
     if len(coms) < 3:
         return 0
@@ -412,9 +445,13 @@ def omple_buits(municipis: list, per_defecte: str):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--cache", default=None, help="directori per desar les respostes descarregades")
+    ap.add_argument("--cache", default=os.path.join(ROOT, ".cache-osm"),
+                    help="directori on es desen els extractes descarregats")
     ap.add_argument("--out", default=OUT)
     args = ap.parse_args()
+    os.makedirs(args.cache, exist_ok=True)
+    if shutil.which("osmium") is None:
+        sys.exit("Cal instal·lar osmium-tool (apt install osmium-tool)")
 
     veg_de = {norm(c): v for v, cs in VEGUERIES.items() for c in cs}
 
