@@ -57,6 +57,7 @@ TERRITORIS = [
         "nom": "Principat de Catalunya",
         "extractes": ["europe/spain/cataluna"],
         "limit": {"ISO3166-2": "ES-CT"},
+        "codi": ("ine:municipio", ("08", "17", "25", "43")),
         "comarques": "osm",
     },
     {
@@ -64,6 +65,7 @@ TERRITORIS = [
         "nom": "País Valencià",
         "extractes": ["europe/spain/valencia"],
         "limit": {"ISO3166-2": "ES-VC"},
+        "codi": ("ine:municipio", ("03", "12", "46")),
         "comarques": "osm_o_viquipedia",
     },
     {
@@ -71,6 +73,7 @@ TERRITORIS = [
         "nom": "Illes Balears",
         "extractes": ["europe/spain/islas-baleares"],
         "limit": {"ISO3166-2": "ES-IB"},
+        "codi": ("ine:municipio", ("07",)),
         "comarques": "illes",
     },
     {
@@ -78,6 +81,7 @@ TERRITORIS = [
         "nom": "Catalunya Nord",
         "extractes": ["europe/france/languedoc-roussillon", "europe/france/occitanie", "europe/france"],
         "limit": {"admin_level": "6", "ref:INSEE": "66"},
+        "codi": ("ref:INSEE", ("66",)),
         "comarques": "viquipedia",
     },
     {
@@ -135,6 +139,13 @@ ARTICLES = ("el ", "la ", "els ", "les ", "l'", "l’")
 
 def log(*a):
     print(*a, file=sys.stderr, flush=True)
+
+
+def avis(msg: str):
+    """Avís visible com a anotació a GitHub Actions."""
+    log(msg)
+    if os.environ.get("GITHUB_ACTIONS"):
+        print(f"::warning::{msg}", flush=True)
 
 
 def norm(s: str) -> str:
@@ -231,8 +242,10 @@ def limits_administratius(extractes: list[str], cache: str) -> list[tuple[dict, 
                 sortida = None
                 continue
         filtrat = os.path.join(cache, nom + "-limits.osm.pbf")
-        subprocess.run(["osmium", "tags-filter", "--overwrite", "-o", filtrat, pbf,
-                        "r/boundary=administrative"], check=True)
+        r = subprocess.run(["osmium", "tags-filter", "--overwrite", "-o", filtrat, pbf,
+                            "r/boundary=administrative"], capture_output=True, text=True)
+        if r.returncode != 0:
+            raise RuntimeError(f"osmium tags-filter ({extracte}): {r.stderr.strip()[-400:]}")
         # Alguns límits que travessen la vora de l'extracte no es poden construir:
         # osmium ho avisa però continua; per això no exigim codi de sortida 0.
         subprocess.run(["osmium", "export", "--overwrite", "-f", "geojsonseq",
@@ -366,9 +379,11 @@ def descarrega_territori(t: dict, cache: str):
     lim_geom = None
     if t.get("limit"):
         cands = [g for tags, g in limits if all(tags.get(k) == v for k, v in t["limit"].items())]
-        if not cands:
-            raise RuntimeError(f"[{t['id']}] no trobo el límit {t['limit']} a l'extracte")
-        lim_geom = unary_union(cands).buffer(0.001)
+        if cands:
+            lim_geom = unary_union(cands).buffer(0.001)
+        else:
+            avis(f"[{t['id']}] no trobo el límit {t['limit']} a l'extracte; faig servir només els codis oficials")
+    clau_codi, prefixos = t.get("codi", (None, ()))
 
     municipis = []
     for tags, g in limits:
@@ -377,14 +392,21 @@ def descarrega_territori(t: dict, cache: str):
         if t.get("municipi_nom") and t["municipi_nom"] not in (tags.get("name"), tags.get("name:it")):
             continue
         rp = g.representative_point()
-        if lim_geom is not None and not lim_geom.contains(rp):
-            continue  # municipi veí, fora del territori
+        codi = tags.get(clau_codi, "") if clau_codi else ""
+        if codi:
+            if not codi.startswith(prefixos):
+                continue  # municipi d'una altra província/departament
+        elif lim_geom is not None:
+            if not lim_geom.contains(rp):
+                continue  # municipi veí, fora del territori
+        elif clau_codi:
+            continue  # sense codi ni límit: no podem saber si és del territori
         municipis.append({
             "osm": tags["@id"][1:], "nom": nom_de(tags), "cand": noms_candidats(tags),
             "geom": g, "lat": rp.y, "lon": rp.x, "comarca": None,
         })
     t["_lim_geom"] = lim_geom
-    log(f"[{t['id']}] {len(municipis)} municipis")
+    avis(f"[{t['id']}] {len(municipis)} municipis")
     return municipis
 
 
@@ -439,8 +461,8 @@ def omple_buits(municipis: list, per_defecte: str):
         else:
             m["comarca"] = per_defecte
     if buits:
-        log(f"    {len(buits)} municipis assignats per proximitat: "
-            + ", ".join(sorted(m["nom"] for m in buits)[:40]))
+        avis(f"{len(buits)} municipis assignats a comarca per proximitat: "
+             + ", ".join(sorted(m["nom"] for m in buits)[:40]))
 
 
 def main():
@@ -494,7 +516,7 @@ def main():
             cid = f"{t['id']}-{slug(nom_c)}"
             veg = veg_de.get(norm(nom_c)) if t["id"] == "PR" else None
             if t["id"] == "PR" and veg is None:
-                log(f"    AVÍS: comarca sense vegueria: {nom_c}")
+                avis(f"Comarca sense vegueria: {nom_c}")
             vid = f"VEG-{slug(veg)}" if veg else None
             g = unary_union([m["geom"] for m in ms])
             tot_territori.append(g)
@@ -527,9 +549,16 @@ def main():
         f"{len(sortida['comarques'])} comarques, {len(sortida['vegueries'])} vegueries, "
         f"{os.path.getsize(args.out) // 1024} KB")
     if len(sortida["municipis"]) < 1500:
-        log("ERROR: massa pocs municipis, alguna descàrrega ha fallat")
-        sys.exit(1)
+        raise RuntimeError(f"Massa pocs municipis ({len(sortida['municipis'])}); alguna descàrrega ha fallat")
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:  # noqa: BLE001
+        import traceback
+        traceback.print_exc()
+        if os.environ.get("GITHUB_ACTIONS"):
+            tb = traceback.extract_tb(e.__traceback__)[-1]
+            print(f"::error::{type(e).__name__} a la línia {tb.lineno} ({tb.name}): {e}", flush=True)
+        sys.exit(1)
