@@ -423,7 +423,7 @@ def descarrega_territori(t: dict, cache: str):
         per_codi: dict[str, dict] = {}
         sense = []
         for m in municipis:
-            k = m.pop("codi", "")[:5]
+            k = m.get("codi", "")[:5]
             if not k:
                 sense.append(m)
             elif k not in per_codi or m["geom"].area > per_codi[k]["geom"].area:
@@ -431,6 +431,12 @@ def descarrega_territori(t: dict, cache: str):
         if len(per_codi) + len(sense) != len(municipis):
             avis(f"[{t['id']}] {len(municipis) - len(per_codi) - len(sense)} duplicats eliminats per codi")
         municipis = list(per_codi.values()) + sense
+    if clau_codi:
+        llargs: dict[int, int] = {}
+        for m in municipis:
+            llargs[len(m.get("codi", ""))] = llargs.get(len(m.get("codi", "")), 0) + 1
+        estranys = sorted(f"{m['nom']}({m.get('codi', '')})" for m in municipis if len(m.get("codi", "")) != 5)
+        avis(f"[{t['id']}] llargada dels codis {llargs}; codis no estàndard: {', '.join(estranys[:30])}")
     avis(f"[{t['id']}] {len(municipis)} municipis")
     return municipis
 

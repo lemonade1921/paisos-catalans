@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "cat.paisoscatalans"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "cat.paisoscatalans"
