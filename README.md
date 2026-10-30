@@ -80,7 +80,7 @@ python tools/build_data.py --cache .cache-osm
 python tools/escuts.py
 ```
 
-A GitHub Actions, cada `push` a `main` compila l'APK i cada etiqueta `v*` publica una versió nova amb l'APK
-adjunt i actualitza les captures de pantalla.
+A GitHub Actions, cada `push` a `main` compila l'APK. Quan `versionName` (a `app/build.gradle.kts`) canvia, es
+publica automàticament la versió `v<versionName>` amb l'APK adjunt i s'actualitzen les captures de pantalla.
 Per signar amb una clau pròpia, defineix els secrets `SIGNATURA_FITXER_B64` (el `.jks` en base64),
 `SIGNATURA_CONTRASENYA` i `SIGNATURA_ALIES`. Si no hi són, es fa servir la clau de desenvolupament del repositori.

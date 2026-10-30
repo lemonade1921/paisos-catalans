@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   apk:
@@ -110,15 +111,30 @@ jobs:
           name: paisos-catalans-apk
           path: app/build/outputs/apk/release/*.apk
 
+      # Quan es puja a main una versionName que encara no té versió publicada, es crea l'etiqueta
+      # v<versionName> i la versió amb l'APK, i s'engeguen les captures de pantalla.
       - name: Publica la versió
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          VERSIO="${GITHUB_REF_NAME}"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSIO="${GITHUB_REF_NAME}"
+          elif [[ "$GITHUB_REF" == refs/heads/main ]]; then
+            VERSIO="v$(sed -n 's/.*versionName *= *"\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)"
+            if gh release view "$VERSIO" >/dev/null 2>&1; then
+              echo "La versió $VERSIO ja està publicada."; exit 0
+            fi
+          else
+            exit 0
+          fi
           cp app/build/outputs/apk/release/*.apk "paisos-catalans-${VERSIO}.apk"
           NOTES=".github/notes/${VERSIO}.md"
           [ -f "$NOTES" ] || NOTES=/dev/null
-          gh release create "$VERSIO" "paisos-catalans-${VERSIO}.apk" \
-            --title "Països Catalans ${VERSIO}" --notes-file "$NOTES" --latest \
-            || gh release upload "$VERSIO" "paisos-catalans-${VERSIO}.apk" --clobber
+          if gh release create "$VERSIO" "paisos-catalans-${VERSIO}.apk" --target "$GITHUB_SHA" \
+               --title "Països Catalans ${VERSIO}" --notes-file "$NOTES" --latest; then
+            echo "::notice title=Versió publicada::$VERSIO"
+            gh workflow run captures.yml --ref main || echo "::warning::No s'han pogut engegar les captures"
+          else
+            gh release upload "$VERSIO" "paisos-catalans-${VERSIO}.apk" --clobber
+          fi
