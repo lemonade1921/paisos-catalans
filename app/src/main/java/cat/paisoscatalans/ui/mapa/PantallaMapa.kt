@@ -1,6 +1,5 @@
 package cat.paisoscatalans.ui.mapa
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -193,7 +192,7 @@ fun PantallaMapa(
             }
 
             // Fitxa de l'element seleccionat
-            AnimatedVisibility(
+            androidx.compose.animation.AnimatedVisibility(
                 visible = seleccionat != null,
                 enter = slideInVertically { it },
                 exit = slideOutVertically { it },
