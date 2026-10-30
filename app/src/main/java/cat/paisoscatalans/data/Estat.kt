@@ -23,6 +23,8 @@ data class Partida(
 /** Tot el que l'usuari genera. Es desa en un fitxer JSON privat de l'app. */
 data class Estat(
     val nom: String = "",
+    /** Aparença: "sistema", "clar", "fosc" o "oled" */
+    val tema: String = "sistema",
     val teFoto: Boolean = false,
     val fotoVersio: Long = 0,
     /** id de municipi -> dia (epochDay) en què es va marcar com a visitat */
@@ -69,7 +71,10 @@ class Magatzem(private val context: Context) {
         mutex.withLock {
             fitxer.delete()
             fitxerFoto.delete()
-            _estat.value = Estat()
+            // L'aparença és una preferència de l'app, no una dada personal: la conservem.
+            val tema = _estat.value.tema
+            _estat.value = Estat(tema = tema)
+            if (tema != "sistema") fitxer.writeText(escriu(_estat.value).toString())
         }
     }
 
@@ -91,6 +96,7 @@ class Magatzem(private val context: Context) {
         }
         return Estat(
             nom = o.optString("nom"),
+            tema = o.optString("tema", "sistema"),
             fotoVersio = o.optLong("fotoVersio"),
             visitats = vis,
             partides = parts,
@@ -100,6 +106,7 @@ class Magatzem(private val context: Context) {
     private fun escriu(e: Estat): JSONObject = JSONObject().apply {
         put("versio", 1)
         put("nom", e.nom)
+        put("tema", e.tema)
         put("fotoVersio", e.fotoVersio)
         put("visitats", JSONObject().apply { e.visitats.forEach { (k, v) -> put(k, v) } })
         put("partides", JSONObject().apply {

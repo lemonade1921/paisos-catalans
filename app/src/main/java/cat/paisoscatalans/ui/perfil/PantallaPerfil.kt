@@ -32,9 +32,10 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
@@ -73,7 +74,7 @@ import cat.paisoscatalans.data.Ratxa
 import cat.paisoscatalans.ui.Seccio
 
 @Composable
-private fun formaDe(c: Categoria): Shape = when (c) {
+internal fun formaDe(c: Categoria): Shape = when (c) {
     Categoria.MUNICIPIS -> MaterialShapes.Cookie9Sided.toShape()
     Categoria.COMARQUES -> MaterialShapes.Clover4Leaf.toShape()
     Categoria.VEGUERIES -> MaterialShapes.Sunny.toShape()
@@ -81,7 +82,7 @@ private fun formaDe(c: Categoria): Shape = when (c) {
     Categoria.RATXA -> MaterialShapes.Flower.toShape()
 }
 
-private fun iconaDe(c: Categoria): ImageVector = when (c) {
+internal fun iconaDe(c: Categoria): ImageVector = when (c) {
     Categoria.MUNICIPIS -> Icons.Filled.Place
     Categoria.COMARQUES -> Icons.Filled.Map
     Categoria.VEGUERIES -> Icons.Filled.Explore
@@ -98,8 +99,8 @@ fun PantallaPerfil(
     onFoto: (Uri) -> Unit,
     onTreuFoto: () -> Unit,
     onNom: (String) -> Unit,
-    onEsborraTot: () -> Unit,
     onComparteix: () -> Unit,
+    onAjustos: () -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
     val focus = LocalFocusManager.current
@@ -109,7 +110,7 @@ fun PantallaPerfil(
         if (uri != null) onFoto(uri)
     }
     var nom by rememberSaveable(estat.nom) { mutableStateOf(estat.nom) }
-    var confirmaEsborrar by remember { mutableStateOf(false) }
+    var oberta by remember { mutableStateOf<Insignia?>(null) }
 
     val dia = JocDiari.avui()
     val ratxa = Ratxa.actual(estat, dia)
@@ -125,6 +126,18 @@ fun PantallaPerfil(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Perfil", style = MaterialTheme.typography.displaySmall, modifier = Modifier.weight(1f))
+                FilledTonalIconButton(onClick = onComparteix) {
+                    Icon(Icons.Filled.Share, contentDescription = "Comparteix")
+                }
+                FilledTonalIconButton(onClick = onAjustos) {
+                    Icon(Icons.Filled.Settings, contentDescription = "Ajustos")
+                }
+            }
+        }
+
         item(span = { GridItemSpan(maxLineSpan) }) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 Box(
@@ -190,52 +203,25 @@ fun PantallaPerfil(
             val llista = insignies.filter { it.categoria == cat }
             if (llista.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) { Seccio(cat.titol) }
-                items(llista, key = { it.id }) { TargetaInsignia(it, formaDe(cat), iconaDe(cat)) }
+                items(llista, key = { it.id }) { ins ->
+                    TargetaInsignia(ins, formaDe(cat), iconaDe(cat)) { oberta = ins }
+                }
             }
         }
 
         item(span = { GridItemSpan(maxLineSpan) }) {
-            Surface(color = cs.surfaceContainer, shape = RoundedCornerShape(24.dp), modifier = Modifier.padding(top = 16.dp)) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Lock, contentDescription = null, tint = cs.primary)
-                        Text("  Privadesa", style = MaterialTheme.typography.titleMedium)
-                    }
-                    Text(
-                        "Aquesta app funciona sense connexió i no té permís per accedir a Internet. " +
-                            "El teu nom, la foto, els llocs visitats i les partides només es desen en aquest telèfon. " +
-                            "No hi ha comptes, ni anuncis, ni estadístiques d'ús.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = cs.onSurfaceVariant,
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilledTonalButton(onClick = onComparteix) {
-                            Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Text("  Comparteix")
-                        }
-                        TextButton(onClick = { confirmaEsborrar = true }) {
-                            Text("Esborra totes les dades", color = cs.error)
-                        }
-                    }
-                    Text(geo.atribucio + " · Dades del ${geo.versio}", style = MaterialTheme.typography.bodySmall,
-                        color = cs.onSurfaceVariant)
-                }
-            }
+            Text(
+                "Toca una insígnia per veure-la en 3D.",
+                style = MaterialTheme.typography.bodySmall,
+                color = cs.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            )
         }
     }
 
-    if (confirmaEsborrar) {
-        AlertDialog(
-            onDismissRequest = { confirmaEsborrar = false },
-            title = { Text("Esborrar-ho tot?") },
-            text = { Text("S'esborraran el nom, la foto, tots els llocs visitats i l'historial del joc. No es pot desfer.") },
-            confirmButton = {
-                TextButton(onClick = { confirmaEsborrar = false; onEsborraTot() }) {
-                    Text("Esborra", color = cs.error)
-                }
-            },
-            dismissButton = { TextButton(onClick = { confirmaEsborrar = false }) { Text("Cancel·la") } },
-        )
+    oberta?.let { ins ->
+        DialegInsignia(ins, formaDe(ins.categoria), iconaDe(ins.categoria), ins.categoria.titol) { oberta = null }
     }
 }
 
@@ -252,14 +238,17 @@ private fun Xifra(valor: String, etiqueta: String, modifier: Modifier = Modifier
 }
 
 @Composable
-private fun TargetaInsignia(i: Insignia, forma: Shape, icona: ImageVector) {
+private fun TargetaInsignia(i: Insignia, forma: Shape, icona: ImageVector, onToca: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val fons = if (i.aconseguida) cs.tertiaryContainer else cs.surfaceContainerHighest
     val tinta = if (i.aconseguida) cs.onTertiaryContainer else cs.outline
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
-        modifier = Modifier.padding(vertical = 4.dp),
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .clickable(onClickLabel = "Mostra la medalla", onClick = onToca)
+            .padding(vertical = 6.dp, horizontal = 2.dp),
     ) {
         Box(Modifier.size(72.dp).background(fons, forma), contentAlignment = Alignment.Center) {
             Icon(icona, contentDescription = i.descripcio, tint = tinta, modifier = Modifier.size(30.dp))

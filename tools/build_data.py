@@ -51,6 +51,79 @@ TOL_COMARCA = 0.0015
 TOL_GRAN = 0.0025
 Q = 10000  # quantització: 1e-4 graus (~10 m)
 
+# Municipis de predomini lingüístic castellà (Llei 4/1983 d'ús i ensenyament del valencià,
+# art. 36), més els creats després a partir d'aquests (Pilar de la Horadada, Los Montesinos,
+# San Isidro). Al País Valencià només es mostren els de predomini valencià.
+PV_CASTELLANOPARLANTS = [
+    # Alacant
+    "Albatera", "Algorfa", "Almoradí", "Aspe", "Benejúzar", "Benferri", "Benijófar", "Bigastro",
+    "Callosa de Segura", "Catral", "Cox", "Daya Nueva", "Daya Vieja", "Dolores", "Elda",
+    "Formentera del Segura", "Granja de Rocamora", "Jacarilla", "Monforte del Cid", "Orihuela",
+    "Rafal", "Redován", "Rojales", "Salinas", "San Fulgencio", "San Miguel de Salinas", "Sax",
+    "Torrevieja", "Villena", "Pilar de la Horadada", "Los Montesinos", "San Isidro",
+    # Castelló
+    "Algimia de Almonacid", "Almedíjar", "Altura", "Arañuel", "Argelita", "Ayódar", "Azuébar",
+    "Barracas", "Bejís", "Benafer", "Castellnovo", "Castillo de Villamalefa", "Caudiel", "Cirat",
+    "Cortes de Arenoso", "Chóvar", "Espadilla", "Fanzara", "Fuente la Reina", "Fuentes de Ayódar",
+    "Gaibiel", "Gátova", "Geldo", "Higueras", "Jérica", "Ludiente", "Matet", "Montán",
+    "Montanejos", "Navajas", "Olocau del Rey", "Pavías", "Pina de Montalgrao", "Puebla de Arenoso",
+    "Sacañet", "Segorbe", "Soneja", "Sot de Ferrer", "Teresa", "Toga", "Torás", "El Toro",
+    "Torralba del Pinar", "Torrechiva", "Vall de Almonacid", "Vallat", "Villahermosa del Río",
+    "Villamalur", "Villanueva de Viver", "Viver", "Zucaina",
+    # València
+    "Ademuz", "Alborache", "Alcublas", "Alpuente", "Andilla", "Anna", "Aras de los Olmos",
+    "Aras de Alpuente", "Ayora", "Benagéber", "Bicorp", "Bolbaite", "Bugarra", "Buñol", "Calles",
+    "Camporrobles", "Casas Altas", "Casas Bajas", "Castielfabib", "Caudete de las Fuentes",
+    "Cofrentes", "Cortes de Pallás", "Chelva", "Chella", "Chera", "Cheste", "Chiva", "Chulilla",
+    "Domeño", "Dos Aguas", "Enguera", "Fuenterrobles", "Gestalgar", "Godelleta", "Higueruelas",
+    "Jalance", "Jarafuel", "Loriguilla", "Losa del Obispo", "Macastre", "Marines", "Millares",
+    "Navarrés", "Pedralba", "Puebla de San Miguel", "Quesa", "Requena", "Siete Aguas", "Sinarcas",
+    "Sot de Chera", "Teresa de Cofrentes", "Titaguas", "Torrebaja", "Tous", "Tuéjar", "Utiel",
+    "Vallanca", "Venta del Moro", "Villar del Arzobispo", "Villargordo del Cabriel", "Yátova",
+    "La Yesa", "Zarra",
+]
+
+# Franja de Ponent: (comarca, nom català, nom oficial castellà)
+FRANJA = [
+    ("Baix Cinca", "Fraga", "Fraga"), ("Baix Cinca", "Mequinensa", "Mequinenza"),
+    ("Baix Cinca", "Saidí", "Zaidín"), ("Baix Cinca", "Torrent de Cinca", "Torrente de Cinca"),
+    ("Baix Cinca", "Vilella de Cinca", "Velilla de Cinca"),
+    ("Llitera", "Albelda", "Albelda"), ("Llitera", "Baells", "Baells"), ("Llitera", "el Campell", "Alcampell"),
+    ("Llitera", "Camporrells", "Camporrells"), ("Llitera", "Castellonroi", "Castillonroy"),
+    ("Llitera", "Peralta de la Sal", "Peralta de Calasanz"),
+    ("Llitera", "Sant Esteve de Llitera", "San Esteban de Litera"), ("Llitera", "Sanui i Alins", "Azanuy-Alins"),
+    ("Llitera", "Tamarit de Llitera", "Tamarite de Litera"), ("Llitera", "el Torricó", "Altorricón"),
+    ("Llitera", "Valldellou", "Baldellou"), ("Llitera", "Vensilló", "Vencillón"),
+    ("Matarranya", "Aiguaviva de Bergantes", "Aguaviva"), ("Matarranya", "Arenys de Lledó", "Arens de Lledó"),
+    ("Matarranya", "Bellmunt de Mesquí", "Belmonte de San José"), ("Matarranya", "Beseit", "Beceite"),
+    ("Matarranya", "Calaceit", "Calaceite"), ("Matarranya", "la Canyada de Beric", "La Cañada de Verich"),
+    ("Matarranya", "la Codonyera", "La Codoñera"), ("Matarranya", "Cretes", "Cretas"),
+    ("Matarranya", "Faió", "Fayón"), ("Matarranya", "Favara de Matarranya", "Fabara"),
+    ("Matarranya", "Fondespatla", "Fuentespalda"), ("Matarranya", "Fórnols de Matarranya", "Fórnoles"),
+    ("Matarranya", "la Freixneda", "La Fresneda"), ("Matarranya", "la Ginebrosa", "La Ginebrosa"),
+    ("Matarranya", "Lledó d'Algars", "Lledó"), ("Matarranya", "Maella", "Maella"),
+    ("Matarranya", "Massalió", "Mazaleón"), ("Matarranya", "Mont-roig de Tastavins", "Monroyo"),
+    ("Matarranya", "Nonasp", "Nonaspe"), ("Matarranya", "Pena-roja", "Peñarroya de Tastavins"),
+    ("Matarranya", "la Portellada", "La Portellada"), ("Matarranya", "Ràfels", "Ráfales"),
+    ("Matarranya", "la Sorollera", "Valdealgorfa"), ("Matarranya", "Torredarques", "Torre de Arcas"),
+    ("Matarranya", "la Torre del Comte", "Torre del Compte"), ("Matarranya", "la Torre de Vilella", "Torrevelilla"),
+    ("Matarranya", "la Vall de Tormo", "Valdeltormo"), ("Matarranya", "Vall-de-roures", "Valderrobres"),
+    ("Matarranya", "Valljunquera", "Valjunquera"),
+    ("Ribagorça", "Areny de Noguera", "Arén"), ("Ribagorça", "Benavarri", "Benabarre"),
+    ("Ribagorça", "Beranui", "Beranuy"), ("Ribagorça", "Bonansa", "Bonansa"),
+    ("Ribagorça", "Castigaleu", "Castigaleu"), ("Ribagorça", "Estopanyà", "Estopiñán del Castillo"),
+    ("Ribagorça", "Lasquarri", "Lascuarre"), ("Ribagorça", "Monesma i Queixigar", "Monesma y Cajigar"),
+    ("Ribagorça", "Montanui", "Montanuy"), ("Ribagorça", "les Paüls", "Las Paúles"),
+    ("Ribagorça", "la Pobla de Roda", "Isábena"), ("Ribagorça", "el Pont de Montanyana", "Puente de Montañana"),
+    ("Ribagorça", "Sopeira", "Sopeira"), ("Ribagorça", "Tolba", "Tolva"),
+    ("Ribagorça", "Viacamp", "Viacamp y Litera"),
+]
+
+# El Carxe (Múrcia): zona catalanoparlant dins dels termes de Jumilla, Iecla i Favanella,
+# sense municipi propi. Polígon aproximat (lon, lat).
+CARXE = [(-1.235, 38.43), (-1.19, 38.39), (-1.11, 38.385), (-1.05, 38.425), (-1.035, 38.50),
+         (-1.09, 38.535), (-1.17, 38.525), (-1.23, 38.48)]
+
 TERRITORIS = [
     {
         "id": "PR",
@@ -59,22 +132,8 @@ TERRITORIS = [
         "limit": {"ISO3166-2": "ES-CT"},
         "codi": ("ine:municipio", ("08", "17", "25", "43")),
         "comarques": "osm",
-    },
-    {
-        "id": "PV",
-        "nom": "País Valencià",
-        "extractes": ["europe/spain/valencia"],
-        "limit": {"ISO3166-2": "ES-VC"},
-        "codi": ("ine:municipio", ("03", "12", "46")),
-        "comarques": "osm_o_viquipedia",
-    },
-    {
-        "id": "IB",
-        "nom": "Illes Balears",
-        "extractes": ["europe/spain/islas-baleares"],
-        "limit": {"ISO3166-2": "ES-IB"},
-        "codi": ("ine:municipio", ("07",)),
-        "comarques": "illes",
+        # La Vall d'Aran és occitanoparlant
+        "exclou_comarques": ["Aran"],
     },
     {
         "id": "CN",
@@ -83,6 +142,39 @@ TERRITORIS = [
         "limit": {"admin_level": "6", "ref:INSEE": "66"},
         "codi": ("ref:INSEE", ("66",)),
         "comarques": "viquipedia",
+        # La Fenolleda és occitanoparlant
+        "exclou_comarques": ["Fenolleda"],
+    },
+    {
+        "id": "FR",
+        "nom": "Franja de Ponent",
+        "extractes": ["europe/spain/aragon"],
+        "limit": None,
+        "codi": ("ine:municipio", ("22", "44", "50")),
+        "comarques": "llista",
+        "llista": FRANJA,
+    },
+    {
+        "id": "PV",
+        "nom": "País Valencià",
+        "extractes": ["europe/spain/valencia"],
+        "limit": {"ISO3166-2": "ES-VC"},
+        "codi": ("ine:municipio", ("03", "12", "46")),
+        "comarques": "osm_o_viquipedia",
+        "exclou_municipis": PV_CASTELLANOPARLANTS,
+    },
+    {
+        "id": "CX",
+        "nom": "el Carxe",
+        "comarques": "manual",
+    },
+    {
+        "id": "IB",
+        "nom": "Illes Balears",
+        "extractes": ["europe/spain/islas-baleares"],
+        "limit": {"ISO3166-2": "ES-IB"},
+        "codi": ("ine:municipio", ("07",)),
+        "comarques": "illes",
     },
     {
         "id": "AL",
@@ -120,8 +212,8 @@ ILLES = [
 ]
 
 VEGUERIES = {
-    "Alt Pirineu i Aran": ["Alt Urgell", "Alta Ribagorça", "Cerdanya", "Pallars Jussà",
-                           "Pallars Sobirà", "Aran"],
+    # L'Aran no forma part dels Països Catalans (és occitanoparlant)
+    "Alt Pirineu": ["Alt Urgell", "Alta Ribagorça", "Cerdanya", "Pallars Jussà", "Pallars Sobirà"],
     "Barcelona": ["Baix Llobregat", "Barcelonès", "Maresme", "Vallès Occidental", "Vallès Oriental"],
     "Camp de Tarragona": ["Alt Camp", "Baix Camp", "Conca de Barberà", "Priorat", "Tarragonès"],
     "Catalunya Central": ["Bages", "Berguedà", "Moianès", "Osona", "Solsonès", "Lluçanès"],
@@ -417,6 +509,39 @@ def descarrega_territori(t: dict, cache: str):
             "geom": g, "lat": rp.y, "lon": rp.x, "comarca": None, "codi": codi,
         })
     t["_lim_geom"] = lim_geom
+
+    if t.get("exclou_municipis"):
+        exclou = {norm(n) for n in t["exclou_municipis"]}
+        trobats = set()
+        resta = []
+        for m in municipis:
+            coincidencia = m["cand"] & exclou
+            if coincidencia:
+                trobats |= coincidencia
+            else:
+                resta.append(m)
+        no_trobats = sorted(exclou - trobats)
+        avis(f"[{t['id']}] exclosos {len(municipis) - len(resta)} municipis de predomini castellà"
+             + (f"; no trobats: {', '.join(no_trobats)}" if no_trobats else ""))
+        municipis = resta
+
+    if t.get("llista"):
+        index = {}
+        for comarca, nom_ca, nom_es in t["llista"]:
+            for n in (nom_ca, nom_es):
+                index[norm(n)] = (comarca, nom_ca)
+        resta = []
+        trobats = set()
+        for m in municipis:
+            hit = next((index[c] for c in m["cand"] if c in index), None)
+            if hit:
+                m["comarca"], m["nom"] = hit
+                trobats.add(norm(hit[1]))
+                resta.append(m)
+        no_trobats = sorted(nom_ca for _, nom_ca, _ in t["llista"] if norm(nom_ca) not in trobats)
+        avis(f"[{t['id']}] {len(resta)} de {len(t['llista'])} municipis de la llista"
+             + (f"; no trobats: {', '.join(no_trobats)}" if no_trobats else ""))
+        municipis = resta
     # Un sol municipi per codi oficial (fora duplicats i entitats menors amb el mateix prefix)
     if clau_codi:
         per_codi: dict[str, dict] = {}
@@ -552,8 +677,14 @@ def main():
     geoms_veg: dict[str, list] = {}
 
     for t in TERRITORIS:
-        municipis = descarrega_territori(t, args.cache)
         mode = t["comarques"]
+        if mode == "manual":
+            g = Polygon(CARXE)
+            rp = g.representative_point()
+            municipis = [{"osm": "carxe", "nom": "el Carxe", "cand": set(), "geom": g,
+                          "lat": rp.y, "lon": rp.x, "comarca": "Carxe"}]
+        else:
+            municipis = descarrega_territori(t, args.cache)
         if mode == "osm":
             comarques_osm(t, municipis, args.cache)
         elif mode == "osm_o_viquipedia":
@@ -573,6 +704,13 @@ def main():
             for m in municipis:
                 m["comarca"] = t["nom"]
         omple_buits(municipis, t["nom"])
+
+        if t.get("exclou_comarques"):
+            fora = {norm(c) for c in t["exclou_comarques"]}
+            abans = len(municipis)
+            municipis = [m for m in municipis if norm(m["comarca"]) not in fora]
+            avis(f"[{t['id']}] exclosos {abans - len(municipis)} municipis de: {', '.join(t['exclou_comarques'])}")
+        avis(f"[{t['id']}] total final: {len(municipis)} municipis")
 
         per_comarca: dict[str, list] = {}
         for m in municipis:
@@ -615,7 +753,7 @@ def main():
     log(f"Escrit {args.out}: {len(sortida['municipis'])} municipis, "
         f"{len(sortida['comarques'])} comarques, {len(sortida['vegueries'])} vegueries, "
         f"{os.path.getsize(args.out) // 1024} KB")
-    if len(sortida["municipis"]) < 1500:
+    if len(sortida["municipis"]) < 1400:
         raise RuntimeError(f"Massa pocs municipis ({len(sortida['municipis'])}); alguna descàrrega ha fallat")
 
 

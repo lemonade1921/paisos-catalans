@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ShortNavigationBar
 import androidx.compose.material3.ShortNavigationBarItem
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -44,6 +46,7 @@ import cat.paisoscatalans.Carrega
 import cat.paisoscatalans.data.Geo
 import cat.paisoscatalans.data.JocDiari
 import cat.paisoscatalans.data.Progres
+import cat.paisoscatalans.ui.ajustos.PantallaAjustos
 import cat.paisoscatalans.ui.compartir.FullCompartir
 import cat.paisoscatalans.ui.joc.PantallaJoc
 import cat.paisoscatalans.ui.mapa.ModelMapa
@@ -51,6 +54,8 @@ import cat.paisoscatalans.ui.mapa.PantallaMapa
 import cat.paisoscatalans.ui.perfil.PantallaPerfil
 import cat.paisoscatalans.ui.progres.PantallaComarca
 import cat.paisoscatalans.ui.progres.PantallaProgres
+import cat.paisoscatalans.ui.theme.ModeTema
+import cat.paisoscatalans.ui.theme.TemaPaisos
 
 private enum class Pestanya(val etiqueta: String, val actiu: ImageVector, val inactiu: ImageVector) {
     MAPA("Mapa", Icons.Filled.Map, Icons.Outlined.Map),
@@ -61,6 +66,16 @@ private enum class Pestanya(val etiqueta: String, val actiu: ImageVector, val in
 
 @Composable
 fun App(vm: AppViewModel = viewModel()) {
+    val estat by vm.estat.collectAsStateWithLifecycle()
+    TemaPaisos(ModeTema.de(estat.tema)) {
+        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            Contingut(vm)
+        }
+    }
+}
+
+@Composable
+private fun Contingut(vm: AppViewModel) {
     val carrega by vm.geo.collectAsStateWithLifecycle()
     when (val c = carrega) {
         Carrega.EnCurs -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LoadingIndicator() }
@@ -83,9 +98,12 @@ private fun AppAmbDades(vm: AppViewModel, geo: Geo) {
     var pestanya by rememberSaveable { mutableStateOf(Pestanya.MAPA) }
     var comarca by rememberSaveable { mutableStateOf<String?>(null) }
     var compartint by rememberSaveable { mutableStateOf(false) }
+    var ajustos by rememberSaveable { mutableStateOf(false) }
+    val sistemaFosc = isSystemInDarkTheme()
 
-    BackHandler(enabled = comarca != null) { comarca = null }
-    BackHandler(enabled = comarca == null && pestanya != Pestanya.MAPA) { pestanya = Pestanya.MAPA }
+    BackHandler(enabled = ajustos) { ajustos = false }
+    BackHandler(enabled = !ajustos && comarca != null) { comarca = null }
+    BackHandler(enabled = !ajustos && comarca == null && pestanya != Pestanya.MAPA) { pestanya = Pestanya.MAPA }
 
     val jocPendent = estat.partides[JocDiari.avui()]?.acabada != true
 
@@ -95,7 +113,7 @@ private fun AppAmbDades(vm: AppViewModel, geo: Geo) {
                 Pestanya.entries.forEach { p ->
                     ShortNavigationBarItem(
                         selected = pestanya == p,
-                        onClick = { pestanya = p; comarca = null },
+                        onClick = { pestanya = p; comarca = null; ajustos = false },
                         icon = {
                             Box {
                                 Icon(if (pestanya == p) p.actiu else p.inactiu, contentDescription = null)
@@ -115,11 +133,20 @@ private fun AppAmbDades(vm: AppViewModel, geo: Geo) {
             verticalArrangement = Arrangement.Top,
         ) {
             AnimatedContent(
-                targetState = comarca to pestanya,
+                targetState = Triple(ajustos, comarca, pestanya),
                 transitionSpec = { fadeIn() togetherWith fadeOut() },
                 label = "pantalla",
-            ) { (com, pes) ->
-                if (com != null) {
+            ) { (aju, com, pes) ->
+                if (aju) {
+                    PantallaAjustos(
+                        geo,
+                        tema = ModeTema.de(estat.tema),
+                        sistemaFosc = sistemaFosc,
+                        onTema = { vm.canviaTema(it.clau) },
+                        onEsborraTot = { vm.esborraTot() },
+                        onEnrere = { ajustos = false },
+                    )
+                } else if (com != null) {
                     PantallaComarca(
                         geo, model, estat, com,
                         onEnrere = { comarca = null },
@@ -150,8 +177,8 @@ private fun AppAmbDades(vm: AppViewModel, geo: Geo) {
                         onFoto = { vm.desaFoto(it) },
                         onTreuFoto = { vm.treuFoto() },
                         onNom = { vm.canviaNom(it) },
-                        onEsborraTot = { vm.esborraTot() },
                         onComparteix = { compartint = true },
+                        onAjustos = { ajustos = true },
                     )
                 }
             }

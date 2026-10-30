@@ -1,5 +1,8 @@
 package cat.paisoscatalans.ui.theme
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MotionScheme
@@ -7,10 +10,13 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 
 private val Clar = lightColorScheme(
     primary = Color(0xFF9A4521),
@@ -97,10 +103,68 @@ val Tipografia = base.copy(
 
 val XifraGran = TextStyle(fontSize = 64.sp, lineHeight = 64.sp, fontWeight = FontWeight.Black, letterSpacing = (-2).sp)
 
+/** Mode d'aparença triat a Ajustos. */
+enum class ModeTema(val clau: String, val etiqueta: String, val descripcio: String) {
+    SISTEMA("sistema", "Segueix el sistema", "Clar o fosc segons el telèfon"),
+    CLAR("clar", "Clar", "Fons clars en tot moment"),
+    FOSC("fosc", "Fosc", "Fons foscos en tot moment"),
+    OLED("oled", "OLED", "Negre pur: estalvia bateria a pantalles OLED"),
+    ;
+
+    companion object {
+        fun de(clau: String): ModeTema = entries.firstOrNull { it.clau == clau } ?: SISTEMA
+    }
+}
+
+/** Esquema fosc amb fons de negre pur i contenidors amb prou contrast per distingir-los. */
+private val Oled = Fosc.copy(
+    background = Color.Black,
+    surface = Color.Black,
+    surfaceDim = Color.Black,
+    surfaceBright = Color(0xFF2A201E),
+    surfaceContainerLowest = Color.Black,
+    surfaceContainerLow = Color(0xFF0B0807),
+    surfaceContainer = Color(0xFF130E0D),
+    surfaceContainerHigh = Color(0xFF1C1513),
+    surfaceContainerHighest = Color(0xFF261D1B),
+)
+
+private fun Context.activitat(): Activity? {
+    var c: Context? = this
+    while (c is ContextWrapper) {
+        if (c is Activity) return c
+        c = c.baseContext
+    }
+    return null
+}
+
 @Composable
-fun TemaPaisos(content: @Composable () -> Unit) {
+fun TemaPaisos(mode: ModeTema = ModeTema.SISTEMA, content: @Composable () -> Unit) {
+    val sistemaFosc = isSystemInDarkTheme()
+    val fosc = when (mode) {
+        ModeTema.SISTEMA -> sistemaFosc
+        ModeTema.CLAR -> false
+        ModeTema.FOSC, ModeTema.OLED -> true
+    }
+    val esquema = when {
+        mode == ModeTema.OLED -> Oled
+        fosc -> Fosc
+        else -> Clar
+    }
+    // Icones de la barra d'estat i de navegació d'acord amb el tema triat (no el del sistema)
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            view.context.activitat()?.window?.let { w ->
+                WindowCompat.getInsetsController(w, view).apply {
+                    isAppearanceLightStatusBars = !fosc
+                    isAppearanceLightNavigationBars = !fosc
+                }
+            }
+        }
+    }
     MaterialExpressiveTheme(
-        colorScheme = if (isSystemInDarkTheme()) Fosc else Clar,
+        colorScheme = esquema,
         motionScheme = MotionScheme.expressive(),
         typography = Tipografia,
         content = content,

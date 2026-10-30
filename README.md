@@ -1,7 +1,9 @@
 # Països Catalans
 
 App per a Android per portar el compte dels **municipis**, **comarques** i **vegueries** que has visitat
-al Principat de Catalunya, el País Valencià, Catalunya Nord, les Illes Balears i l'Alguer.
+als territoris de parla catalana: el Principat de Catalunya (sense la Vall d'Aran), Catalunya Nord (sense la
+Fenolleda), la Franja de Ponent, el País Valencià (municipis de predomini lingüístic valencià), el Carxe,
+les Illes Balears i l'Alguer.
 Inclou un joc diari per endevinar un municipi i insígnies per anar-ne guanyant.
 
 Disseny: Material 3 Expressive (Jetpack Compose). Tota l'app és en català.
@@ -14,6 +16,8 @@ Disseny: Material 3 Expressive (Jetpack Compose). Tota l'app és en català.
 - **Joc diari: el municipi del dia.** Sis intents; cada resposta mostra la distància, la direcció i la proximitat.
   Pistes de territori i comarca. Ratxa de dies seguits jugant.
 - **Perfil** amb nom, foto i **insígnies**: municipis, comarques, vegueries, territoris i ratxes del joc.
+  Toca una insígnia per veure-la com una medalla en 3D que pots fer girar.
+- **Ajustos**: aparença Segueix el sistema / Clar / Fosc / OLED (negre pur).
 - **Comparteix** una imatge (format història o publicació) o un text a Instagram Stories, Signal, Molly,
   Mastodon i Bluesky, o desa la imatge a la galeria.
 
@@ -36,9 +40,13 @@ Els límits provenen d'**OpenStreetMap** (© col·laboradors d'OpenStreetMap, ll
 
 1. Descarrega els extractes regionals d'OSM de [Geofabrik](https://download.geofabrik.de/) i, amb `osmium`, n'extreu els municipis (`admin_level=8`) de cada territori.
 2. Assigna la comarca de cada municipi:
-   - Principat: comarques d'OSM (`admin_level=7`).
-   - País Valencià: comarques d'OSM si n'hi ha prou; si no, les categories «Municipis de …» de la Viquipèdia.
-   - Catalunya Nord: categories de la Viquipèdia (Rosselló, Conflent, Vallespir, Capcir, Alta Cerdanya, Fenolleda).
+   - Principat: comarques d'OSM (`admin_level=7`). Se n'exclou la Vall d'Aran (occitanoparlant).
+   - Catalunya Nord: categories i plantilles de la Viquipèdia (Rosselló, Conflent, Vallespir, Capcir,
+     Alta Cerdanya). Se n'exclou la Fenolleda (occitanoparlant).
+   - Franja de Ponent: llista fixa de 61 municipis catalanoparlants (Ribagorça, Llitera, Baix Cinca, Matarranya).
+   - País Valencià: comarques d'OSM. Se n'exclouen els municipis de predomini lingüístic castellà
+     (art. 36 de la Llei 4/1983 d'ús i ensenyament del valencià).
+   - El Carxe (Múrcia): no té municipi propi; s'hi inclou com una sola àrea amb un límit aproximat.
    - Illes Balears: cada illa fa de comarca (Mallorca, Menorca, Eivissa, Formentera).
    - L'Alguer: un sol municipi.
    Els municipis que no es poden assignar prenen la comarca del municipi veí més proper (l'script ho avisa).

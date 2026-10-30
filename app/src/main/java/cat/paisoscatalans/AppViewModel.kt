@@ -59,6 +59,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun canviaTema(tema: String) = viewModelScope.launch {
+        magatzem.actualitza { it.copy(tema = tema) }
+    }
+
     fun canviaNom(nom: String) = viewModelScope.launch {
         magatzem.actualitza { it.copy(nom = nom.trim().take(40)) }
     }
