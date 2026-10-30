@@ -17,9 +17,9 @@ Disseny: Material 3 Expressive (Jetpack Compose). Tota l'app és en català.
 - **Progrés** per territori i per comarca, amb la llista de municipis de cada comarca.
 - **Joc diari: el municipi del dia.** Sis intents; cada resposta mostra la distància, la direcció i la proximitat.
   Pistes de territori i comarca. Ratxa de dies seguits jugant.
-- **Perfil** amb nom, foto i **insígnies**: municipis, comarques, vegueries, territoris i ratxes del joc.
+- **Perfil** amb les **insígnies**: municipis, comarques, vegueries, territoris i ratxes del joc.
   Toca una insígnia per veure-la com una medalla en 3D que pots fer girar.
-- **Ajustos**: aparença Segueix el sistema / Clar / Fosc / OLED (negre pur) i **còpia de seguretat**:
+- **Ajustos**: nom, foto i article personal; aparença Segueix el sistema / Clar / Fosc / OLED (negre pur) i **còpia de seguretat**:
   desa i restaura en un fitxer JSON els llocs visitats, les partides (ratxes i insígnies), el perfil i els ajustos.
 - **Comparteix** una imatge (format història o publicació) o un text a Instagram Stories, Signal, Molly,
   Mastodon i Bluesky, o desa la imatge a la galeria.
@@ -50,8 +50,10 @@ Els límits provenen d'**OpenStreetMap** (© col·laboradors d'OpenStreetMap, ll
    - País Valencià: comarques d'OSM. Se n'exclouen els municipis de predomini lingüístic castellà
      (art. 36 de la Llei 4/1983 d'ús i ensenyament del valencià).
    - Andorra: les 7 parròquies fan de municipis.
-   - El Carxe (Múrcia): no té municipi propi. Es calcula com la part dels termes de Iecla, Jumella i Favanella
-     que toca el Pinós i l'Alguenya (a menys d'uns 10 km d'aquests dos municipis valencians).
+   - El Carxe (Múrcia): no té municipis propis. Es localitzen els seus nuclis a OSM (el Carxe, el Raspai,
+     la Torre del Rico, la Canyada del Trigo, la Sarsa, la Canyada de l'Alenya…); l'àrea cobreix aquests nuclis
+     i la franja fins al Pinós i l'Alguenya, dins dels termes de Iecla, Jumella i Favanella, i es divideix en una
+     zona per nucli, que fan de municipis.
    - Illes Balears: cada illa fa de comarca (Mallorca, Menorca, Eivissa, Formentera).
    - L'Alguer: un sol municipi.
    Els municipis que no es poden assignar prenen la comarca del municipi veí més proper (l'script ho avisa).

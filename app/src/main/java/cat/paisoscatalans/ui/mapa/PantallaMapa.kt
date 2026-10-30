@@ -155,42 +155,37 @@ fun PantallaMapa(
                             onToc = { seleccionat = it?.id; focus.clearFocus() },
                             modifier = Modifier.fillMaxSize(),
                         )
-                        // Controls dins del mapa: capes i pantalla completa
-                        Row(
-                            Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        // Pantalla completa: a dalt a la dreta
+                        FilledTonalIconButton(
+                            onClick = { onPantallaCompleta(!complet) },
+                            modifier = Modifier.align(Alignment.TopEnd).padding(10.dp).size(48.dp),
                         ) {
-                            Surface(
-                                color = cs.surfaceContainerHigh.copy(alpha = 0.95f),
-                                shape = RoundedCornerShape(28.dp),
-                                shadowElevation = 4.dp,
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                GrupOpcions(
-                                    opcions = Capa.entries,
-                                    seleccionada = capa,
-                                    etiqueta = { it.etiqueta },
-                                    onTria = { capa = it; seleccionat = null },
-                                    modifier = Modifier.padding(4.dp),
-                                )
-                            }
-                            FilledTonalIconButton(
-                                onClick = { onPantallaCompleta(!complet) },
-                                modifier = Modifier.size(52.dp),
-                            ) {
-                                Icon(
-                                    if (complet) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen,
-                                    contentDescription = if (complet) "Surt de la pantalla completa" else "Mapa a pantalla completa",
-                                )
-                            }
+                            Icon(
+                                if (complet) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen,
+                                contentDescription = if (complet) "Surt de la pantalla completa" else "Mapa a pantalla completa",
+                            )
+                        }
+                        // Capes: barra a la part de baix del mapa, amb tota l'amplada
+                        Surface(
+                            color = cs.surfaceContainerHigh.copy(alpha = 0.96f),
+                            shape = RoundedCornerShape(28.dp),
+                            shadowElevation = 4.dp,
+                            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(10.dp),
+                        ) {
+                            GrupOpcions(
+                                opcions = Capa.entries,
+                                seleccionada = capa,
+                                etiqueta = { it.etiqueta },
+                                onTria = { capa = it; seleccionat = null },
+                                modifier = Modifier.padding(4.dp),
+                            )
                         }
                         if (complet) {
                             Surface(
                                 color = cs.primary,
                                 shape = RoundedCornerShape(20.dp),
                                 shadowElevation = 4.dp,
-                                modifier = Modifier.align(Alignment.TopStart).padding(start = 12.dp, top = 76.dp),
+                                modifier = Modifier.align(Alignment.TopStart).padding(start = 12.dp, top = 14.dp),
                             ) {
                                 Text(
                                     "${milers(num)} de ${milers(total)} $unitat · ${percent(num, total)}",

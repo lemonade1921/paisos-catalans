@@ -1,6 +1,10 @@
 package cat.paisoscatalans.ui.ajustos
 
+import android.graphics.Bitmap
 import android.net.Uri
+import androidx.compose.material.icons.filled.Person
+import cat.paisoscatalans.data.Estat
+import cat.paisoscatalans.ui.perfil.EditorPerfil
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -75,6 +79,12 @@ private fun mostra(m: ModeTema, sistemaFosc: Boolean): Triple<Color, Color, Colo
 @Composable
 fun PantallaAjustos(
     geo: Geo,
+    estat: Estat,
+    llegeixFoto: suspend () -> Bitmap?,
+    onFoto: (Uri) -> Unit,
+    onTreuFoto: () -> Unit,
+    onNom: (String) -> Unit,
+    onArticle: (String) -> Unit,
     tema: ModeTema,
     sistemaFosc: Boolean,
     onTema: (ModeTema) -> Unit,
@@ -112,7 +122,16 @@ fun PantallaAjustos(
             }
         }
 
-        item { Capcalera(Icons.Filled.Palette, "Aparença") }
+        item { Capcalera(Icons.Filled.Person, "Perfil") }
+        item {
+            Surface(color = cs.surfaceContainer, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
+                Box(Modifier.padding(16.dp)) {
+                    EditorPerfil(estat, llegeixFoto, onFoto, onTreuFoto, onNom, onArticle)
+                }
+            }
+        }
+
+        item { Capcalera(Icons.Filled.Palette, "Aparença", Modifier.padding(top = 20.dp)) }
         item {
             Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 ModeTema.entries.forEachIndexed { i, m ->

@@ -96,6 +96,7 @@ fun PantallaProgres(
         geo.territoris.forEachIndexed { i, t ->
             item(key = "t-${t.id}") {
                 val comarques = geo.comarquesDeTerritori[t.id].orEmpty()
+                val unaSola = comarques.size == 1
                 val esObert = obert == t.id
                 Surface(
                     color = cs.surfaceContainer,
@@ -106,42 +107,75 @@ fun PantallaProgres(
                         Row(
                             Modifier
                                 .fillMaxWidth()
-                                .clickable { obert = if (esObert) null else t.id }
+                                .clickable {
+                                    // Territoris d'una sola comarca (Andorra, el Carxe, l'Alguer):
+                                    // s'obre directament la llista de municipis
+                                    if (unaSola) onObreComarca(comarques.first().id)
+                                    else obert = if (esObert) null else t.id
+                                }
                                 .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            FilaProgres(
-                                t.nom,
-                                progres.perTerritori[t.id] ?: 0,
-                                geo.municipisDeTerritori[t.id]?.size ?: 0,
-                                Modifier.weight(1f),
-                            )
-                            if (comarques.size > 1) {
-                                Icon(
-                                    if (esObert) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                                    contentDescription = if (esObert) "Amaga les comarques" else "Mostra les comarques",
-                                    modifier = Modifier.padding(start = 8.dp),
+                            Column(Modifier.weight(1f)) {
+                                FilaProgres(
+                                    t.nom,
+                                    progres.perTerritori[t.id] ?: 0,
+                                    geo.municipisDeTerritori[t.id]?.size ?: 0,
                                 )
+                                if (!unaSola) {
+                                    val fetes = comarques.count { it.id in progres.comarquesVisitades }
+                                    Text(
+                                        "$fetes de ${comarques.size} comarques",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = cs.onSurfaceVariant,
+                                        modifier = Modifier.padding(top = 6.dp),
+                                    )
+                                }
                             }
+                            Icon(
+                                when {
+                                    unaSola -> Icons.AutoMirrored.Filled.KeyboardArrowRight
+                                    esObert -> Icons.Filled.ExpandLess
+                                    else -> Icons.Filled.ExpandMore
+                                },
+                                contentDescription = when {
+                                    unaSola -> "Mostra els municipis"
+                                    esObert -> "Amaga les comarques"
+                                    else -> "Mostra les comarques"
+                                },
+                                tint = cs.onSurfaceVariant,
+                                modifier = Modifier.padding(start = 12.dp),
+                            )
                         }
-                        if (esObert || comarques.size == 1) {
-                            comarques.forEach { c ->
-                                val fet = progres.perComarca[c.id] ?: 0
-                                val total = geo.municipisDeComarca[c.id]?.size ?: 0
-                                Row(
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .clickable { onObreComarca(c.id) }
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text(c.nom, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                                    if (fet == total && total > 0) {
-                                        Icon(Icons.Filled.Check, contentDescription = "Completa", tint = cs.primary)
+                        if (esObert && !unaSola) {
+                            Surface(
+                                color = cs.surfaceContainerHigh,
+                                shape = RoundedCornerShape(18.dp),
+                                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+                            ) {
+                                Column(Modifier.padding(vertical = 4.dp)) {
+                                    comarques.forEach { c ->
+                                        val fet = progres.perComarca[c.id] ?: 0
+                                        val total = geo.municipisDeComarca[c.id]?.size ?: 0
+                                        Row(
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .clickable { onObreComarca(c.id) }
+                                                .padding(horizontal = 16.dp, vertical = 11.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Text(c.nom, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f),
+                                                maxLines = 1)
+                                            if (fet == total && total > 0) {
+                                                Icon(Icons.Filled.Check, contentDescription = "Completa", tint = cs.primary,
+                                                    modifier = Modifier.padding(end = 6.dp))
+                                            }
+                                            Text("$fet/$total", color = cs.onSurfaceVariant,
+                                                style = MaterialTheme.typography.labelLarge)
+                                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                                                tint = cs.onSurfaceVariant)
+                                        }
                                     }
-                                    Text(" $fet/$total", color = cs.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-                                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
-                                        tint = cs.onSurfaceVariant)
                                 }
                             }
                         }

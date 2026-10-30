@@ -153,6 +153,12 @@ private fun AppAmbDades(vm: AppViewModel, geo: Geo) {
                 if (aju) {
                     PantallaAjustos(
                         geo,
+                        estat = estat,
+                        llegeixFoto = { vm.llegeixFoto() },
+                        onFoto = { vm.desaFoto(it) },
+                        onTreuFoto = { vm.treuFoto() },
+                        onNom = { vm.canviaNom(it) },
+                        onArticle = { vm.canviaArticle(it) },
                         tema = ModeTema.de(estat.tema),
                         sistemaFosc = sistemaFosc,
                         onTema = { vm.canviaTema(it.clau) },
@@ -191,10 +197,6 @@ private fun AppAmbDades(vm: AppViewModel, geo: Geo) {
                     Pestanya.PERFIL -> PantallaPerfil(
                         geo, estat, progres,
                         llegeixFoto = { vm.llegeixFoto() },
-                        onFoto = { vm.desaFoto(it) },
-                        onTreuFoto = { vm.treuFoto() },
-                        onNom = { vm.canviaNom(it) },
-                        onArticle = { vm.canviaArticle(it) },
                         onComparteix = { compartint = true },
                         onAjustos = { ajustos = true },
                     )

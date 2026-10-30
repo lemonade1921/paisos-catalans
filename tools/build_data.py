@@ -125,6 +125,23 @@ FRANJA = [
 CARXE_MURCIA = ["Yecla", "Jumilla", "Abanilla"]
 CARXE_VEINS = ["el Pinós", "Pinoso", "l'Alguenya", "Algueña"]
 CARXE_DIST = 0.10
+# Nuclis del Carxe: (nom en català segons l'AVL, noms possibles a OSM)
+CARXE_NUCLIS = [
+    ("el Carxe", ["El Carche", "Carche"]),
+    ("el Raspai", ["Raspay", "El Raspay"]),
+    ("la Torre del Rico", ["Torre del Rico", "La Torre del Rico"]),
+    ("la Canyada del Trigo", ["Cañada del Trigo", "La Cañada del Trigo"]),
+    ("la Raja", ["La Raja", "Raja"]),
+    ("la Sarsa", ["La Zarza", "Zarza"]),
+    ("l'Ombria de la Sarsa", ["Umbría de la Zarza", "La Umbría de la Zarza"]),
+    ("la Canyada de l'Alenya", ["Cañada de la Leña", "La Cañada de la Leña", "Los Martínez", "Los Martines"]),
+    ("el Collado dels Gabriels", ["Collado de los Gabrieles", "El Collado de los Gabrieles", "Los Gabrieles"]),
+    ("l'Alberquilla", ["La Alberquilla", "Alberquilla", "La Arboleja"]),
+    ("els Pinillos", ["Los Pinillos", "Pinillos"]),
+    ("el Carrascalejo", ["Carrascalejo", "El Carrascalejo"]),
+    ("els Escandells", ["Los Escandeles", "Escandeles", "Los Escandells"]),
+    ("els Càpitos", ["Los Cápitos", "Cápitos"]),
+]
 # Polígon aproximat, només si no es pot calcular amb les dades d'OSM (lon, lat)
 CARXE_RESERVA = [(-1.16, 38.30), (-1.10, 38.27), (-1.04, 38.30), (-1.03, 38.36), (-1.04, 38.43),
                  (-1.08, 38.48), (-1.14, 38.47), (-1.18, 38.40)]
@@ -699,25 +716,104 @@ def omple_buits(municipis: list, per_defecte: str):
              + ", ".join(sorted(m["nom"] for m in buits)[:40]))
 
 
-def calcula_carxe(t: dict, cache: str, valencians: list):
+def norm_es(n: str) -> str:
+    """Com norm(), però també treu els articles castellans."""
+    n = norm(n)
+    for art in ("los ", "las ", "el ", "la "):
+        if n.startswith(art):
+            n = n[len(art):]
+    return n
+
+
+def llocs_poblats(extractes: list[str], cache: str) -> list[tuple[str, object]]:
+    """Nuclis de població (nodes place=*) d'un extracte: (nom, punt)."""
+    nom = extractes[0].replace("/", "_")
+    sortida = os.path.join(cache, nom + "-llocs.geojsonseq")
+    if not os.path.exists(sortida):
+        pbf = os.path.join(cache, nom + ".osm.pbf")
+        if not os.path.exists(pbf):
+            descarrega(GEOFABRIK + extractes[0] + "-latest.osm.pbf", pbf)
+        filtrat = os.path.join(cache, nom + "-llocs.osm.pbf")
+        subprocess.run(["osmium", "tags-filter", "--overwrite", "-o", filtrat, pbf,
+                        "n/place=village,hamlet,isolated_dwelling,locality,neighbourhood"], check=True)
+        subprocess.run(["osmium", "export", "--overwrite", "-f", "geojsonseq", "--geometry-types=point",
+                        "-o", sortida, filtrat], check=True)
+    out = []
+    with open(sortida, encoding="utf-8") as f:
+        for linia in f:
+            linia = linia.strip().strip("\x1e").strip()
+            if not linia:
+                continue
+            try:
+                feat = json.loads(linia)
+                props = feat.get("properties") or {}
+                g = shape(feat["geometry"])
+            except Exception:  # noqa: BLE001
+                continue
+            for k in ("name", "name:es", "name:ca", "alt_name"):
+                if props.get(k):
+                    out.append((props[k], g))
+    return out
+
+
+def calcula_carxe(t: dict, cache: str, valencians: list) -> list[dict]:
+    """
+    El Carxe: àrea que cobreix els seus nuclis i la franja fins a la ratlla del Pinós i
+    l'Alguenya, retallada als termes de Iecla, Jumella i Favanella, i dividida en una
+    zona per nucli (que fan de "municipis").
+    """
+    from shapely.geometry import MultiPoint
+    from shapely.ops import voronoi_diagram
     try:
         limits = limits_administratius(t["extractes"], cache)
         noms = {norm(n) for n in CARXE_MURCIA}
-        murcia = [g for tags, g in limits
-                  if tags.get("admin_level") == "8" and noms_candidats(tags) & noms]
+        murcia = unary_union([g for tags, g in limits
+                              if tags.get("admin_level") == "8" and noms_candidats(tags) & noms])
         veins_n = {norm(n) for n in CARXE_VEINS}
-        veins = [m["geom"] for m in valencians if m["cand"] & veins_n]
-        if len(murcia) < 3 or len(veins) < 2:
-            raise RuntimeError(f"trobats {len(murcia)} municipis murcians i {len(veins)} veïns")
-        g = unary_union(murcia).intersection(unary_union(veins).buffer(CARXE_DIST))
-        g = unary_union(poligons(g)).buffer(0)
-        if g.is_empty or g.area < 0.002:
+        veins = unary_union([m["geom"] for m in valencians if m["cand"] & veins_n])
+        if murcia.is_empty or veins.is_empty:
+            raise RuntimeError("no trobo Iecla/Jumella/Favanella o el Pinós/l'Alguenya")
+        zona_busca = murcia.intersection(veins.buffer(0.22))  # on poden ser els nuclis
+
+        cercats = {norm_es(alt): nom_ca for nom_ca, alts in CARXE_NUCLIS for alt in alts}
+        trobats: dict[str, object] = {}
+        for nom, pt in llocs_poblats(t["extractes"], cache):
+            nom_ca = cercats.get(norm_es(nom))
+            if nom_ca and nom_ca not in trobats and zona_busca.contains(pt):
+                trobats[nom_ca] = pt
+        no = [n for n, _ in CARXE_NUCLIS if n not in trobats]
+        resum(f"[CX] nuclis trobats: {', '.join(trobats)}" + (f"; no trobats: {', '.join(no)}" if no else ""))
+        if len(trobats) < 3:
+            raise RuntimeError(f"només {len(trobats)} nuclis")
+
+        # Ratlla amb el Pinós i l'Alguenya
+        ratlla = murcia.boundary.intersection(veins.buffer(0.003))
+        punts = list(trobats.values())
+        nucli = MultiPoint(punts).convex_hull
+        area = unary_union([nucli, ratlla]).convex_hull.buffer(0.025)
+        area = unary_union(poligons(area.intersection(murcia))).buffer(0)
+        if area.is_empty:
             raise RuntimeError("àrea buida")
-        resum(f"[CX] el Carxe calculat amb OSM ({g.area * 9000:.0f} km² aprox.)")
-        return g
+        resum(f"[CX] àrea del Carxe ~{area.area * 9000:.0f} km²")
+
+        celles = voronoi_diagram(MultiPoint(punts), envelope=area.envelope.buffer(0.1))
+        municipis = []
+        for nom_ca, pt in trobats.items():
+            cel = next((c for c in celles.geoms if c.contains(pt)), None)
+            if cel is None:
+                continue
+            g = unary_union(poligons(cel.intersection(area))).buffer(0)
+            if g.is_empty:
+                continue
+            municipis.append({"osm": "carxe-" + slug(nom_ca), "nom": nom_ca, "cand": {norm(nom_ca)},
+                              "geom": g, "lat": pt.y, "lon": pt.x, "comarca": "Carxe"})
+        return municipis
     except Exception as e:  # noqa: BLE001
         resum(f"[CX] no s'ha pogut calcular el Carxe ({e}); faig servir el polígon de reserva")
-        return Polygon(CARXE_RESERVA)
+        g = Polygon(CARXE_RESERVA)
+        rp = g.representative_point()
+        return [{"osm": "carxe", "nom": "el Carxe", "cand": set(), "geom": g,
+                 "lat": rp.y, "lon": rp.x, "comarca": "Carxe"}]
 
 
 def main():
@@ -743,10 +839,7 @@ def main():
     for t in TERRITORIS:
         mode = t["comarques"]
         if mode == "carxe":
-            g = calcula_carxe(t, args.cache, per_territori.get("PV", []))
-            rp = g.representative_point()
-            municipis = [{"osm": "carxe", "nom": "el Carxe", "cand": set(), "geom": g,
-                          "lat": rp.y, "lon": rp.x, "comarca": "Carxe"}]
+            municipis = calcula_carxe(t, args.cache, per_territori.get("PV", []))
         else:
             municipis = descarrega_territori(t, args.cache)
         per_territori[t["id"]] = municipis

@@ -62,7 +62,9 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import cat.paisoscatalans.data.Article
 import cat.paisoscatalans.data.Categoria
 import cat.paisoscatalans.data.Estat
 import cat.paisoscatalans.data.Geo
@@ -91,20 +93,39 @@ internal fun iconaDe(c: Categoria): ImageVector = when (c) {
     Categoria.RATXA -> Icons.Filled.LocalFireDepartment
 }
 
+/** Avatar del perfil: la foto, la inicial del nom o una icona. */
 @Composable
-fun PantallaPerfil(
-    geo: Geo,
+fun Avatar(foto: Bitmap?, nom: String, mida: Dp, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
+    val cs = MaterialTheme.colorScheme
+    Box(
+        modifier
+            .size(mida)
+            .clip(MaterialShapes.Cookie9Sided.toShape())
+            .background(cs.primaryContainer)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        contentAlignment = Alignment.Center,
+    ) {
+        when {
+            foto != null -> Image(foto.asImageBitmap(), contentDescription = "Foto de perfil",
+                contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            nom.isNotBlank() -> Text(nom.trim().take(1).uppercase(), color = cs.onPrimaryContainer,
+                style = if (mida > 100.dp) MaterialTheme.typography.displayMedium else MaterialTheme.typography.headlineMedium)
+            else -> Icon(Icons.Filled.AddAPhoto, contentDescription = "Tria una foto de perfil",
+                tint = cs.onPrimaryContainer, modifier = Modifier.size(mida * 0.32f))
+        }
+    }
+}
+
+/** Foto, nom i article personal. Es fa servir a Ajustos. */
+@Composable
+fun EditorPerfil(
     estat: Estat,
-    progres: Progres,
     llegeixFoto: suspend () -> Bitmap?,
     onFoto: (Uri) -> Unit,
     onTreuFoto: () -> Unit,
     onNom: (String) -> Unit,
     onArticle: (String) -> Unit,
-    onComparteix: () -> Unit,
-    onAjustos: () -> Unit,
 ) {
-    val cs = MaterialTheme.colorScheme
     val focus = LocalFocusManager.current
     var foto by remember { mutableStateOf<Bitmap?>(null) }
     LaunchedEffect(estat.fotoVersio, estat.teFoto) { foto = if (estat.teFoto) llegeixFoto() else null }
@@ -112,6 +133,44 @@ fun PantallaPerfil(
         if (uri != null) onFoto(uri)
     }
     var nom by rememberSaveable(estat.nom) { mutableStateOf(estat.nom) }
+    val obreFotos = { tria.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Avatar(foto, nom, 88.dp, onClick = obreFotos)
+            Column(Modifier.padding(start = 12.dp)) {
+                TextButton(onClick = obreFotos) { Text(if (foto == null) "Tria una foto" else "Canvia la foto") }
+                if (foto != null) TextButton(onClick = onTreuFoto) { Text("Treu la foto") }
+            }
+        }
+        OutlinedTextField(
+            value = nom,
+            onValueChange = { nom = it.take(40) },
+            label = { Text("El teu nom") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { onNom(nom); focus.clearFocus() }),
+            trailingIcon = {
+                if (nom != estat.nom) TextButton(onClick = { onNom(nom); focus.clearFocus() }) { Text("Desa") }
+            },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        SelectorArticle(nom, estat.article, onTria = onArticle, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+@Composable
+fun PantallaPerfil(
+    geo: Geo,
+    estat: Estat,
+    progres: Progres,
+    llegeixFoto: suspend () -> Bitmap?,
+    onComparteix: () -> Unit,
+    onAjustos: () -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+    var foto by remember { mutableStateOf<Bitmap?>(null) }
+    LaunchedEffect(estat.fotoVersio, estat.teFoto) { foto = if (estat.teFoto) llegeixFoto() else null }
     var oberta by remember { mutableStateOf<Insignia?>(null) }
 
     val dia = JocDiari.avui()
@@ -119,7 +178,6 @@ fun PantallaPerfil(
     val ratxaMax = Ratxa.maxima(estat)
     val insignies = remember(geo, progres, ratxaMax) { Insignies.calcula(geo, progres, ratxaMax) }
     val aconseguides = insignies.count { it.aconseguida }
-    val avatar = MaterialShapes.Cookie9Sided.toShape()
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(104.dp),
@@ -130,59 +188,22 @@ fun PantallaPerfil(
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Perfil", style = MaterialTheme.typography.displaySmall, modifier = Modifier.weight(1f))
+                Avatar(foto, estat.nom, 64.dp, onClick = onAjustos)
+                Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                    Text(
+                        if (estat.nom.isBlank()) "Perfil" else Article.nominatiu(estat.nom, estat.article),
+                        style = MaterialTheme.typography.headlineMedium,
+                        maxLines = 1,
+                    )
+                    Text("$aconseguides de ${insignies.size} insígnies", style = MaterialTheme.typography.bodyMedium,
+                        color = cs.onSurfaceVariant)
+                }
                 FilledTonalIconButton(onClick = onComparteix) {
                     Icon(Icons.Filled.Share, contentDescription = "Comparteix")
                 }
                 FilledTonalIconButton(onClick = onAjustos) {
-                    Icon(Icons.Filled.Settings, contentDescription = "Ajustos")
+                    Icon(Icons.Filled.Settings, contentDescription = "Ajustos i perfil")
                 }
-            }
-        }
-
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                Box(
-                    Modifier
-                        .size(132.dp)
-                        .clip(avatar)
-                        .background(cs.primaryContainer)
-                        .clickable {
-                            tria.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    val f = foto
-                    if (f != null) {
-                        Image(f.asImageBitmap(), contentDescription = "Foto de perfil",
-                            contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                    } else if (nom.isNotBlank()) {
-                        Text(nom.trim().take(1).uppercase(), style = MaterialTheme.typography.displayMedium,
-                            color = cs.onPrimaryContainer)
-                    } else {
-                        Icon(Icons.Filled.AddAPhoto, contentDescription = "Tria una foto de perfil",
-                            tint = cs.onPrimaryContainer, modifier = Modifier.size(40.dp))
-                    }
-                }
-                Row {
-                    TextButton(onClick = {
-                        tria.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                    }) { Text(if (foto == null) "Tria una foto" else "Canvia la foto") }
-                    if (foto != null) TextButton(onClick = onTreuFoto) { Text("Treu-la") }
-                }
-                OutlinedTextField(
-                    value = nom,
-                    onValueChange = { nom = it.take(40) },
-                    label = { Text("El teu nom") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { onNom(nom); focus.clearFocus() }),
-                    trailingIcon = {
-                        if (nom != estat.nom) TextButton(onClick = { onNom(nom); focus.clearFocus() }) { Text("Desa") }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                SelectorArticle(nom, estat.article, onTria = onArticle, modifier = Modifier.fillMaxWidth().padding(top = 12.dp))
             }
         }
 

@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cat.paisoscatalans.data.Estat
 import cat.paisoscatalans.data.Geo
+import cat.paisoscatalans.data.normalitza
 import cat.paisoscatalans.ui.GrupOpcions
 import cat.paisoscatalans.ui.mapa.ModelMapa
 import cat.paisoscatalans.ui.mapa.Silueta
@@ -65,6 +66,9 @@ fun PantallaComarca(
     val fets = municipis.count { it.id in estat.visitats }
     val vegueria = comarca.vegueria?.let { geo.vegueria[it]?.nom }
     val territori = geo.territori[comarca.territori]?.nom ?: ""
+    // Andorra, l'Alguer, el Carxe: la comarca és tot el territori; no repetim el nom
+    val sensArticle = { n: String -> normalitza(n).removePrefix("el ").removePrefix("la ").removePrefix("l'") }
+    val totElTerritori = sensArticle(comarca.nom) == sensArticle(territori)
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
@@ -77,7 +81,7 @@ fun PantallaComarca(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Torna")
                     }
                     Text(
-                        vegueria?.let { "Vegueria de $it" } ?: territori,
+                        vegueria?.let { "Vegueria de $it" } ?: if (totElTerritori) "Territori" else territori,
                         style = MaterialTheme.typography.labelLarge,
                         color = cs.onSurfaceVariant,
                         modifier = Modifier.weight(1f).padding(start = 12.dp),
@@ -88,7 +92,9 @@ fun PantallaComarca(
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 12.dp)) {
                     Column(Modifier.weight(1f)) {
                         Text(comarca.nom, style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Black)
-                        Text(territori, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
+                        if (!totElTerritori) {
+                            Text(territori, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
+                        }
                     }
                     Silueta(
                         municipis.mapNotNull { m ->

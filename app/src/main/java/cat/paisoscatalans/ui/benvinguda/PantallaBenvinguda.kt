@@ -67,12 +67,12 @@ import kotlinx.coroutines.launch
 private data class Funcio(val icona: ImageVector, val titol: String, val text: String)
 
 private val funcions = listOf(
-    Funcio(Icons.Filled.Map, "Mapa", "Marca els municipis que has visitat i mira com s'omplen les comarques i les vegueries."),
-    Funcio(Icons.Filled.Insights, "Progrés", "Segueix el teu avenç per territori i per comarca, de Salses a Guardamar i de Fraga a Maó."),
-    Funcio(Icons.Filled.Casino, "Joc diari", "Endevina cada dia el municipi amagat amb sis intents. No perdis la ratxa!"),
-    Funcio(Icons.Filled.MilitaryTech, "Insígnies", "Guanya medalles visitant municipis, comarques, vegueries i territoris."),
-    Funcio(Icons.Filled.Share, "Comparteix", "Envia el teu mapa a Instagram Stories, Signal, Molly, Mastodon o Bluesky."),
-    Funcio(Icons.Filled.Lock, "Privadesa", "Funciona sense connexió. Les teves dades només es desen en aquest telèfon."),
+    Funcio(Icons.Filled.Map, "Mapa", "Marca els municipis on has estat i omple comarques i vegueries."),
+    Funcio(Icons.Filled.Insights, "Progrés", "El teu avenç per territori i per comarca."),
+    Funcio(Icons.Filled.Casino, "Joc diari", "Endevina el municipi del dia i no perdis la ratxa."),
+    Funcio(Icons.Filled.MilitaryTech, "Insígnies", "Medalles per municipis, comarques, vegueries i ratxes."),
+    Funcio(Icons.Filled.Share, "Comparteix", "A Instagram Stories, Signal, Molly, Mastodon o Bluesky."),
+    Funcio(Icons.Filled.Lock, "Privadesa", "Sense connexió. Les dades no surten del telèfon."),
 )
 
 /**
@@ -128,30 +128,43 @@ fun PantallaBenvinguda(
             modifier = Modifier.weight(1f),
         ) { p ->
             Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp, vertical = if (p == 0) 12.dp else 24.dp),
+                verticalArrangement = Arrangement.spacedBy(if (p == 0) 12.dp else 16.dp),
             ) {
                 when (p) {
                     0 -> {
-                        Box(
-                            Modifier.size(112.dp).background(cs.primaryContainer, MaterialShapes.Cookie9Sided.toShape()),
-                            contentAlignment = Alignment.Center,
-                        ) { Icon(Icons.Filled.Map, contentDescription = null, tint = cs.onPrimaryContainer, modifier = Modifier.size(52.dp)) }
-                        Text("Et donem la benvinguda als Països Catalans", style = MaterialTheme.typography.headlineLarge)
+                        // Tot ha de cabre a la pantalla sense desplaçar-se
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                Modifier.size(64.dp).background(cs.primaryContainer, MaterialShapes.Cookie9Sided.toShape()),
+                                contentAlignment = Alignment.Center,
+                            ) { Icon(Icons.Filled.Map, contentDescription = null, tint = cs.onPrimaryContainer, modifier = Modifier.size(32.dp)) }
+                            Text(
+                                "Et donem la benvinguda als Països Catalans",
+                                style = MaterialTheme.typography.headlineSmall,
+                                modifier = Modifier.padding(start = 16.dp),
+                            )
+                        }
                         Text(
-                            "Una app per recórrer els territoris de parla catalana, municipi a municipi.",
-                            style = MaterialTheme.typography.bodyLarge,
+                            "Recorre els territoris de parla catalana, municipi a municipi.",
+                            style = MaterialTheme.typography.bodyMedium,
                             color = cs.onSurfaceVariant,
                         )
                         funcions.forEach { f ->
-                            Row(verticalAlignment = Alignment.Top) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
-                                    Modifier.size(44.dp).background(cs.secondaryContainer, RoundedCornerShape(14.dp)),
+                                    Modifier.size(36.dp).background(cs.secondaryContainer, RoundedCornerShape(12.dp)),
                                     contentAlignment = Alignment.Center,
-                                ) { Icon(f.icona, contentDescription = null, tint = cs.onSecondaryContainer) }
-                                Column(Modifier.padding(start = 14.dp)) {
-                                    Text(f.titol, style = MaterialTheme.typography.titleMedium)
-                                    Text(f.text, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                                ) {
+                                    Icon(f.icona, contentDescription = null, tint = cs.onSecondaryContainer,
+                                        modifier = Modifier.size(20.dp))
+                                }
+                                Column(Modifier.padding(start = 12.dp)) {
+                                    Text(f.titol, style = MaterialTheme.typography.titleSmall)
+                                    Text(f.text, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                                 }
                             }
                         }
@@ -186,13 +199,13 @@ fun PantallaBenvinguda(
                         )
                         Opcio(
                             Icons.Filled.RestorePage,
-                            "Restaura una còpia",
+                            "Restaurar una còpia",
                             "Tria el fitxer .json que vas desar des d'Ajustos.",
                             destacada = false,
                         ) { obre.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }
                         Opcio(
                             Icons.Filled.Start,
-                            "Comença de zero",
+                            "Començar des de zero",
                             "Un mapa en blanc per començar a explorar.",
                             destacada = true,
                         ) { onComencaDeZero(nom, article) }
