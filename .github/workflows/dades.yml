@@ -1,0 +1,38 @@
+name: Dades
+
+# Descarrega els límits d'OpenStreetMap, genera app/src/main/assets/geo.json
+# i el desa al repositori. Executa-ho a mà des de la pestanya Actions quan vulguis
+# actualitzar els mapes (l'app sempre funciona amb les dades que porta dins).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  dades:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Genera geo.json
+        run: |
+          pip install -r tools/requirements.txt
+          python tools/build_data.py
+
+      - name: Desa-ho al repositori
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/assets/geo.json
+          if git diff --cached --quiet; then
+            echo "Cap canvi a les dades."
+          else
+            git commit -m "Actualitza les dades dels mapes (OpenStreetMap)"
+            git push
+          fi

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Privadesa: aquesta app NO demana el permís INTERNET. Tot funciona sense connexió
+  i les dades de l'usuari només es desen dins l'emmagatzematge privat de l'app.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Algunes biblioteques podrien afegir-lo: el traiem explícitament. -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
+
+    <!-- Apps de destinació per compartir (visibilitat de paquets, Android 11+) -->
+    <queries>
+        <package android:name="com.instagram.android" />
+        <package android:name="org.thoughtcrime.securesms" />
+        <package android:name="im.molly.app" />
+        <package android:name="org.joinmastodon.android" />
+        <package android:name="org.joinmastodon.android.moshinda" />
+        <package android:name="com.keylesspalace.tusky" />
+        <package android:name="app.fedilab.android" />
+        <package android:name="fr.gouv.etalab.mastodon" />
+        <package android:name="social.tooot" />
+        <package android:name="xyz.blueskyweb.app" />
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="*/*" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:localeConfig="@xml/locales_config"
+        android:supportsRtl="false"
+        android:theme="@style/Theme.PaisosCatalans">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fitxers"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+    </application>
+</manifest>

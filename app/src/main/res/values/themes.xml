@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.PaisosCatalans" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/fons</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+    <color name="fons">#FFF8F6</color>
+    <color name="icona_fons">#9A4521</color>
+</resources>
