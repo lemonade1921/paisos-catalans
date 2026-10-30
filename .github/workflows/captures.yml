@@ -1,0 +1,88 @@
+name: Captures de pantalla
+
+# Compila l'app, l'obre en un emulador amb dades de demostració i desa les captures
+# del README a docs/screenshots. S'executa en publicar una versió o a mà.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  captures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - name: Activa KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Recupera els extractes d'OSM
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache-osm
+          key: osm-${{ hashFiles('tools/build_data.py') }}
+          restore-keys: osm-
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Dades i escuts
+        run: |
+          if [ ! -f app/src/main/assets/geo.json ]; then
+            sudo apt-get update -q && sudo apt-get install -y -q osmium-tool
+            pip install -r tools/requirements.txt
+            python tools/build_data.py --cache .cache-osm
+          fi
+          [ -f app/src/main/assets/escuts/escuts.json ] || python3 tools/escuts.py
+          python3 tools/demo_estat.py > demo-estat.json
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Compila (depuració)
+        run: ./gradlew assembleDebug
+
+      - name: Captures a l'emulador
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash tools/captures.sh
+
+      - name: Desa les captures al repositori
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshots
+          if git diff --cached --quiet; then
+            echo "Cap canvi a les captures."
+          else
+            git commit -m "Actualitza les captures de pantalla [skip ci]"
+            git push origin HEAD:main
+          fi
+
+      - name: Puja les captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: captures
+          path: docs/screenshots
+          if-no-files-found: ignore

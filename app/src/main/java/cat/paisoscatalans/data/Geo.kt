@@ -51,7 +51,19 @@ class Poly(val anells: List<FloatArray>) {
 }
 
 data class Territori(val id: String, val nom: String, val forma: Poly)
-data class Vegueria(val id: String, val nom: String, val territori: String, val forma: Poly)
+data class Vegueria(val id: String, val nom: String, val territori: String, val forma: Poly) {
+    /** "Vegueria de l'Alt Pirineu", "Vegueria del Penedès", "Vegueria de les Terres de l'Ebre"… */
+    val nomComplet: String get() = "Vegueria " + deVegueria(nom)
+}
+
+/** Preposició "de" amb l'article que porta cada vegueria. */
+fun deVegueria(nom: String): String = when (nom) {
+    "Alt Pirineu", "Alt Pirineu i Aran" -> "de l'$nom"
+    "Penedès", "Camp de Tarragona" -> "del $nom"
+    "Terres de l'Ebre" -> "de les $nom"
+    "Catalunya Central" -> "de la $nom"
+    else -> if (nom.firstOrNull()?.lowercaseChar() in setOf('a', 'e', 'i', 'o', 'u')) "d'$nom" else "de $nom"
+}
 data class Comarca(val id: String, val nom: String, val territori: String, val vegueria: String?, val forma: Poly)
 data class Municipi(
     val id: String,

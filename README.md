@@ -1,94 +1,86 @@
+<div align="center">
+
+<img src="docs/icon.svg" width="112" alt="Icona de Països Catalans">
+
 # Països Catalans
 
-App per a Android per portar el compte dels **municipis**, **comarques** i **vegueries** que has visitat
-als territoris de parla catalana: el Principat de Catalunya (sense la Vall d'Aran), Andorra, Catalunya Nord (sense la
-Fenolleda), la Franja de Ponent, el País Valencià (municipis de predomini lingüístic valencià),
-les Illes Balears i l'Alguer.
-Inclou un joc diari per endevinar un municipi i insígnies per anar-ne guanyant.
+**Porta el compte dels municipis, comarques i vegueries que has visitat.**<br>
+Sense connexió, sense comptes i sense que les teves dades surtin del telèfon.
 
-Disseny: Material 3 Expressive (Jetpack Compose). Tota l'app és en català.
+[![Darrera versió](https://img.shields.io/github/v/release/lemonade1921/paisos-catalans?label=versi%C3%B3&color=9A4521)](https://github.com/lemonade1921/paisos-catalans/releases/latest)
+![Android 10+](https://img.shields.io/badge/Android-10%2B-9A4521)
+![Sense Internet](https://img.shields.io/badge/permís_d'Internet-cap-9A4521)
 
-## Funcions
+[**Baixa l'APK**](https://github.com/lemonade1921/paisos-catalans/releases/latest)
 
-- **Benvinguda** que presenta l'app, demana el nom i l'article personal i permet
-  restaurar una còpia de seguretat o començar de zero.
-- **Mapa** vectorial amb tres capes (Municipis / Comarques / Vegueries) dins del mateix mapa, zoom, cerca
-  i mode de pantalla completa. Toca un municipi per marcar-lo com a visitat.
-- **Progrés** per territori i per comarca, amb la llista de municipis de cada comarca.
-- **Joc diari: el municipi del dia.** Sis intents; cada resposta mostra la distància, la direcció i la proximitat.
-  Pistes de territori i comarca. Ratxa de dies seguits jugant.
-- **Perfil** amb les **insígnies**: municipis, comarques, vegueries, territoris i ratxes del joc.
-  Toca una insígnia per veure-la com una medalla en 3D que pots fer girar. Quan n'aconsegueixes una de nova,
-  apareix la medalla amb confeti (es pot desactivar).
-- **Ajustos**: nom, foto i article personal; recordatori diari del joc amb l'hora que triïs (notificació
-  local, sense Internet); confeti; aparença Segueix el sistema / Clar / Fosc / OLED (negre pur) i **còpia de seguretat**:
-  desa i restaura en un fitxer JSON els llocs visitats, les partides (ratxes i insígnies), el perfil i els ajustos.
-- **Comparteix** una imatge (format història o publicació; 8 paletes de colors; mapa, contorns, nom,
-  percentatge, comarques i vegueries, escuts i data opcionals) o un text. Només surten les apps instal·lades
-  (Instagram Stories i Direct, WhatsApp, Missatges, Signal, Molly, Mastodon, Bluesky), amb la seva icona real.
-- **Escuts** de cada territori (insígnies, progrés, imatges compartides), descarregats en compilar de
-  Wikidata/Wikimedia Commons amb `tools/escuts.py` (propietat P94); se'n desa la llicència i l'autoria.
+</div>
 
-## Privadesa i funcionament sense connexió
+<p align="center">
+  <img src="docs/screenshots/mapa.png" width="19%" alt="Mapa">
+  <img src="docs/screenshots/progres.png" width="19%" alt="Progrés">
+  <img src="docs/screenshots/joc.png" width="19%" alt="Joc diari">
+  <img src="docs/screenshots/perfil.png" width="19%" alt="Perfil i insígnies">
+  <img src="docs/screenshots/resum.png" width="19%" alt="Resum per compartir">
+</p>
 
-- L'app **no té el permís d'Internet** (el manifest el treu explícitament). No hi ha comptes, anuncis ni analítiques.
-- Els mapes van **dins l'APK** (`app/src/main/assets/geo.json`): no hi ha tessel·les ni descàrregues.
-- El nom, la foto, els llocs visitats i les partides es desen només a l'emmagatzematge privat de l'app.
-  Les còpies de seguretat al núvol estan desactivades.
-- La foto de perfil es tria amb el selector de fotos del sistema (sense permís d'emmagatzematge) i se'n desa
-  una còpia reduïda dins l'app.
-- Compartir fa servir els intents d'Android: és l'app de destinació qui envia el contingut, no aquesta.
-- El **municipi del dia es calcula al telèfon**: es barregen tots els municipis amb una llavor fixa i cada dia
-  se n'agafa el següent. Tothom té el mateix repte el mateix dia i no es repeteix cap municipi fins que s'han jugat tots.
+## Què hi trobaràs
 
-## Dades dels mapes
+| | |
+|---|---|
+| 🗺️ **Mapa** | Municipis, comarques i vegueries en un mapa vectorial que funciona sense connexió. Toca un municipi per marcar-lo com a visitat. Cerca i pantalla completa. |
+| 📊 **Progrés** | Percentatge visitat de cada territori i de cada comarca, amb l'escut de cada territori. |
+| 🎯 **Joc diari** | Endevina el municipi del dia en sis intents amb pistes de distància i direcció. Mantén la ratxa i, si vols, rep un recordatori. |
+| 🏅 **Insígnies** | Per municipis, comarques, vegueries, territoris i ratxes. Cada medalla es pot girar en 3D; les noves arriben amb confeti. |
+| 📤 **Comparteix** | Imatge en format història, publicació o **resum amb estadístiques**, amb 8 paletes de colors. Només mostra les apps que tens instal·lades. |
+| ⚙️ **Ajustos** | Nom, foto i article personal; aparença clara, fosca o OLED; còpia de seguretat i restauració. |
 
-Els límits provenen d'**OpenStreetMap** (© col·laboradors d'OpenStreetMap, llicència
-[ODbL](https://opendatacommons.org/licenses/odbl/)). L'script `tools/build_data.py`:
+Inclou el Principat de Catalunya, Andorra, Catalunya Nord, la Franja de Ponent, el País Valencià (municipis de
+predomini lingüístic valencià), les Illes Balears i l'Alguer: **1.669 municipis, 83 comarques i 8 vegueries**.
+Tota l'app és en català i fa servir Material 3 Expressive.
 
-1. Descarrega els extractes regionals d'OSM de [Geofabrik](https://download.geofabrik.de/) i, amb `osmium`, n'extreu els municipis (`admin_level=8`) de cada territori.
-2. Assigna la comarca de cada municipi:
-   - Principat: comarques d'OSM (`admin_level=7`). Se n'exclou la Vall d'Aran (occitanoparlant).
-   - Catalunya Nord: categories i plantilles de la Viquipèdia (Rosselló, Conflent, Vallespir, Capcir,
-     Alta Cerdanya). Se n'exclou la Fenolleda (occitanoparlant).
-   - Franja de Ponent: llista fixa de 61 municipis catalanoparlants (Ribagorça, Llitera, Baix Cinca, Matarranya).
-   - País Valencià: comarques d'OSM. Se n'exclouen els municipis de predomini lingüístic castellà
-     (art. 36 de la Llei 4/1983 d'ús i ensenyament del valencià).
-   - Andorra: les 7 parròquies fan de municipis.
-   - Illes Balears: cada illa fa de comarca (Mallorca, Menorca, Eivissa, Formentera).
-   - L'Alguer: un sol municipi.
-   Els municipis que no es poden assignar prenen la comarca del municipi veí més proper (l'script ho avisa).
-3. Agrupa les comarques del Principat en les 8 vegueries.
-4. Simplifica les geometries (~100 m) i les desa quantitzades en un JSON compacte.
+## Instal·lació
 
-Per generar-les:
+1. Obre la [darrera versió](https://github.com/lemonade1921/paisos-catalans/releases/latest) des del telèfon i baixa
+   el fitxer `paisos-catalans-vX.Y.Z.apk`.
+2. Obre'l. Si Android t'ho demana, permet instal·lar apps des del navegador o del gestor de fitxers.
+3. Per actualitzar, instal·la l'APK nou per sobre: totes les versions es signen amb la mateixa clau i
+   les teves dades es mantenen.
 
-```bash
-pip install -r tools/requirements.txt   # i osmium-tool (apt / pacman)
-python tools/build_data.py --cache .cache-osm
-```
+Cal Android 10 o posterior.
 
-O bé, a GitHub: **Actions → Dades → Run workflow**, que les genera i les desa al repositori.
-Si el repositori no té `geo.json`, el flux de compilació les genera automàticament abans de compilar.
+## Privadesa
+
+- L'app **no té permís d'Internet**. No hi ha comptes, anuncis ni analítiques.
+- Els mapes i els escuts van dins de l'APK.
+- Les dades es desen només a l'emmagatzematge privat de l'app. La còpia de seguretat és un fitxer JSON que
+  guardes on vulguis.
+- El municipi del dia es tria al telèfon: tothom té el mateix el mateix dia, sense cap servidor.
+
+## Dades i llicències
+
+- **Límits**: © col·laboradors d'[OpenStreetMap](https://www.openstreetmap.org/copyright), llicència
+  [ODbL](https://opendatacommons.org/licenses/odbl/). Es generen amb `tools/build_data.py` a partir dels extractes de
+  [Geofabrik](https://download.geofabrik.de/).
+- **Escuts**: [Wikimedia Commons](https://commons.wikimedia.org/) via Wikidata (P94), amb `tools/escuts.py`.
+  L'autoria i la llicència de cada escut es desen a `app/src/main/assets/escuts/escuts.json`.
 
 ## Compilar
 
-Cada `push` a `main` compila l'APK a GitHub Actions (**Actions → Compila l'APK → Artifacts**).
-L'APK de release es signa amb la clau de depuració perquè es pugui instal·lar directament; per publicar-la,
-configura-hi la teva clau.
+Cal JDK 17.
 
-Localment: Android Studio o `./gradlew assembleRelease` (JDK 17).
-
-## Estructura
-
+```bash
+./gradlew assembleRelease
 ```
-app/src/main/java/cat/paisoscatalans/
-  data/        Geo (dades dels mapes), Estat (emmagatzematge local), Joc, Progrés i insígnies
-  ui/mapa/     Mapa vectorial amb Canvas (sense biblioteques de mapes)
-  ui/progres/  Progrés i detall de comarca
-  ui/joc/      Joc diari
-  ui/perfil/   Perfil i insígnies
-  ui/compartir/ Full per compartir
-  compartir/   Generació de la imatge i intents de destinació
-tools/build_data.py   Generador de dades a partir d'OpenStreetMap
+
+Si no hi ha `app/src/main/assets/geo.json`, genera'l abans (cal `osmium-tool`):
+
+```bash
+pip install -r tools/requirements.txt
+python tools/build_data.py --cache .cache-osm
+python tools/escuts.py
 ```
+
+A GitHub Actions, cada `push` a `main` compila l'APK i cada etiqueta `v*` publica una versió nova amb l'APK
+adjunt i actualitza les captures de pantalla.
+Per signar amb una clau pròpia, defineix els secrets `SIGNATURA_FITXER_B64` (el `.jks` en base64),
+`SIGNATURA_CONTRASENYA` i `SIGNATURA_ALIES`. Si no hi són, es fa servir la clau de desenvolupament del repositori.

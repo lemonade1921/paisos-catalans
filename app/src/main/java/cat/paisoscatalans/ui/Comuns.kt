@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -57,14 +58,16 @@ fun <T> GrupOpcions(
                 checked = o == seleccionada,
                 onCheckedChange = { onTria(o) },
                 enabled = habilitada(o),
-                modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
+                // L'amplada segueix la llargada de l'etiqueta perquè cap no quedi tallada
+                modifier = Modifier.weight(etiqueta(o).length + 3f).semantics { role = Role.RadioButton },
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
                 shapes = when (i) {
                     0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
                     opcions.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
                     else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
                 },
             ) {
-                Text(etiqueta(o), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(etiqueta(o), maxLines = 1, softWrap = false, overflow = TextOverflow.Clip)
             }
         }
     }

@@ -43,6 +43,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cat.paisoscatalans.AppViewModel
 import cat.paisoscatalans.Carrega
+import cat.paisoscatalans.compartir.Extra
+import cat.paisoscatalans.compartir.Format
 import cat.paisoscatalans.data.Geo
 import cat.paisoscatalans.data.Insignia
 import cat.paisoscatalans.data.Insignies
@@ -121,6 +123,7 @@ private fun AppAmbDades(vm: AppViewModel, geo: Geo, obre: String?, onObert: () -
     var pestanya by rememberSaveable { mutableStateOf(Pestanya.MAPA) }
     var comarca by rememberSaveable { mutableStateOf<String?>(null) }
     var compartint by rememberSaveable { mutableStateOf(false) }
+    var formatCompartir by remember { mutableStateOf(Format.HISTORIA) }
     var ajustos by rememberSaveable { mutableStateOf(false) }
     var mapaComplet by rememberSaveable { mutableStateOf(false) }
     val ambBarra = !(mapaComplet && pestanya == Pestanya.MAPA && comarca == null && !ajustos)
@@ -133,9 +136,19 @@ private fun AppAmbDades(vm: AppViewModel, geo: Geo, obre: String?, onObert: () -
     val jocPendent = estat.partides[JocDiari.avui()]?.acabada != true
 
     // Obrir el joc des de la notificació del recordatori
+    // Obrir una pantalla concreta (notificació del recordatori, o captures de pantalla)
     LaunchedEffect(obre) {
-        if (obre == "joc") {
-            pestanya = Pestanya.JOC; comarca = null; ajustos = false; mapaComplet = false
+        if (obre != null) {
+            comarca = null; ajustos = false; mapaComplet = false; compartint = false
+            when (obre) {
+                "joc" -> pestanya = Pestanya.JOC
+                "mapa" -> pestanya = Pestanya.MAPA
+                "progres" -> pestanya = Pestanya.PROGRES
+                "perfil" -> pestanya = Pestanya.PERFIL
+                "ajustos" -> { pestanya = Pestanya.PERFIL; ajustos = true }
+                "compartir" -> { formatCompartir = Format.HISTORIA; compartint = true }
+                "resum" -> { formatCompartir = Format.RESUM; compartint = true }
+            }
             onObert()
         }
     }
@@ -249,7 +262,16 @@ private fun AppAmbDades(vm: AppViewModel, geo: Geo, obre: String?, onObert: () -
     }
 
     if (compartint) {
-        FullCompartir(geo, model, progres, estat.nom, estat.article, onTanca = { compartint = false })
+        FullCompartir(
+            geo, model, progres, estat.nom, estat.article,
+            extra = Extra(
+                ratxa = Ratxa.actual(estat, JocDiari.avui()),
+                insignies = aconseguides.size,
+                totalInsignies = remember(geo, progres, ratxaMax) { Insignies.calcula(geo, progres, ratxaMax).size },
+            ),
+            formatInicial = formatCompartir,
+            onTanca = { compartint = false; formatCompartir = Format.HISTORIA },
+        )
     }
 
     celebrant?.let { ins ->

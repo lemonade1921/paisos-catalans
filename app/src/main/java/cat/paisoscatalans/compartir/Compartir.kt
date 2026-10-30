@@ -31,8 +31,12 @@ import kotlin.math.min
 enum class Format(val etiqueta: String, val amplada: Int, val alcada: Int) {
     HISTORIA("Història", 1080, 1920),
     PUBLICACIO("Publicació", 1080, 1080),
+    RESUM("Resum", 1080, 1350),
     TEXT("Text", 0, 0),
 }
+
+/** Xifres del perfil que surten al resum. */
+data class Extra(val ratxa: Int = 0, val insignies: Int = 0, val totalInsignies: Int = 0)
 
 /** Colors de la imatge compartida. */
 enum class Paleta(
@@ -143,8 +147,10 @@ object Compartir {
         article: String,
         o: Opcions,
         escuts: Map<String, Bitmap> = emptyMap(),
+        extra: Extra = Extra(),
     ): Bitmap? {
         if (o.format == Format.TEXT) return null
+        if (o.format == Format.RESUM) return resum(geo, p, nom, article, o, escuts, extra)
         val w = o.format.amplada
         val h = o.format.alcada
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
@@ -190,6 +196,145 @@ object Compartir {
             if (o.mapa) dibuixaMapa(c, model, p, pal, o.contorns, Rect(esquerra, 160f, w - 40f, h - 60f))
         }
         return bmp
+    }
+
+    /**
+     * Resum en rajoles, a l'estil de les diapositives de resum d'una presentació:
+     * municipis amb un anell de progrés, comarques, vegueries i territoris, una barra per
+     * territori amb el seu escut (en color si l'has visitat) i la ratxa i les insígnies.
+     */
+    private fun resum(
+        geo: Geo,
+        p: Progres,
+        nom: String,
+        article: String,
+        o: Opcions,
+        escuts: Map<String, Bitmap>,
+        extra: Extra,
+    ): Bitmap {
+        val w = 1080
+        val h = 1350
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        val pal = o.paleta
+        c.drawColor(pal.fons)
+        val clar = luminancia(pal.fons) > 0.6
+        val rajola = if (clar) 0x14000000 else 0x22FFFFFF
+        val rajolaFort = if (clar) 0x22000000 else 0x33FFFFFF
+        val negre = Typeface.create(Typeface.DEFAULT, 900, false)
+        val semi = Typeface.create(Typeface.DEFAULT, 600, false)
+        fun paint(mida: Float, color: Int, tf: Typeface, espai: Float = 0f) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            textSize = mida; this.color = color; typeface = tf; letterSpacing = espai
+        }
+        fun caixa(l: Float, t: Float, r: Float, b: Float, color: Int = rajola) {
+            c.drawRoundRect(l, t, r, b, 44f, 44f, Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color })
+        }
+        fun barra(l: Float, t: Float, r: Float, alt: Float, f: Float) {
+            c.drawRoundRect(l, t, r, t + alt, alt / 2, alt / 2, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = rajolaFort })
+            if (f > 0f) {
+                val fi = l + (r - l) * f.coerceIn(0f, 1f)
+                c.drawRoundRect(l, t, maxOf(fi, l + alt), t + alt, alt / 2, alt / 2,
+                    Paint(Paint.ANTI_ALIAS_FLAG).apply { color = pal.accent })
+            }
+        }
+        val m = 60f
+        val g = 24f
+        val n = p.municipisVisitats.size
+        val total = geo.municipis.size
+        val capcalera = if (o.nom && nom.isNotBlank()) "EL RESUM ${Article.genitiu(nom, article).uppercase()}" else "PAÏSOS CATALANS"
+
+        // 1. Municipis amb anell
+        var y = m
+        caixa(m, y, w - m, y + 380f)
+        c.drawText(capcalera, m + 44f, y + 80f, paint(32f, pal.text, semi, 0.12f).apply { alpha = 210 })
+        c.drawText(milers(n), m + 40f, y + 250f, paint(170f, pal.accent, negre, -0.03f))
+        c.drawText("de ${milers(total)} municipis", m + 44f, y + 320f, paint(44f, pal.text, semi))
+        val cx = w - m - 170f
+        val cy = y + 200f
+        val radi = 115f
+        val anell = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 34f; strokeCap = Paint.Cap.ROUND }
+        c.drawCircle(cx, cy, radi, anell.apply { color = rajolaFort })
+        val frac = if (total > 0) n / total.toFloat() else 0f
+        if (frac > 0f) {
+            c.drawArc(cx - radi, cy - radi, cx + radi, cy + radi, -90f, 360f * frac, false, anell.apply { color = pal.accent })
+        }
+        val pct = percent(n, total)
+        val pp = paint(58f, pal.text, negre).apply { textAlign = Paint.Align.CENTER }
+        c.drawText(pct, cx, cy + 20f, pp)
+        y += 380f + g
+
+        // 2. Comarques, vegueries, territoris
+        val ample3 = (w - 2 * m - 2 * g) / 3f
+        val dades3 = listOf(
+            Triple("comarques", p.comarquesVisitades.size, geo.comarques.size),
+            Triple("vegueries", p.vegueriesVisitades.size, geo.vegueries.size),
+            Triple("territoris", p.territorisVisitats.size, geo.territoris.size),
+        )
+        dades3.forEachIndexed { i, (etiq, fet, tot) ->
+            val l = m + i * (ample3 + g)
+            caixa(l, y, l + ample3, y + 250f)
+            c.drawText("$fet", l + 34f, y + 120f, paint(96f, pal.accent, negre, -0.02f))
+            c.drawText("de $tot $etiq", l + 36f, y + 172f, paint(32f, pal.text, semi))
+            barra(l + 36f, y + 200f, l + ample3 - 36f, 16f, if (tot > 0) fet / tot.toFloat() else 0f)
+        }
+        y += 250f + g
+
+        // 3. Per territori, amb escuts
+        val alt3 = 380f
+        caixa(m, y, w - m, y + alt3)
+        val filaAlt = (alt3 - 40f) / geo.territoris.size.coerceAtLeast(1)
+        val gris = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
+            colorFilter = android.graphics.ColorMatrixColorFilter(android.graphics.ColorMatrix().apply { setSaturation(0f) })
+            alpha = 110
+        }
+        val colorP = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        geo.territoris.forEachIndexed { i, t ->
+            val fy = y + 20f + i * filaAlt
+            val mid = fy + filaAlt / 2f
+            val fet = p.perTerritori[t.id] ?: 0
+            val tot = geo.municipisDeTerritori[t.id]?.size ?: 0
+            val visitat = fet > 0
+            val ic = filaAlt - 10f
+            escuts[t.id]?.let { e ->
+                val a = ic * e.width / e.height.coerceAtLeast(1)
+                c.drawBitmap(e, null, android.graphics.RectF(m + 36f + (ic - a) / 2, mid - ic / 2, m + 36f + (ic + a) / 2, mid + ic / 2),
+                    if (visitat) colorP else gris)
+            }
+            val tp = paint(28f, pal.text, semi).apply { if (!visitat) alpha = 150 }
+            c.drawText(t.nom, m + 50f + ic, mid + 10f, tp)
+            val bl = m + 400f
+            val br = w - m - 130f
+            barra(bl, mid - 8f, br, 16f, if (tot > 0) fet / tot.toFloat() else 0f)
+            c.drawText(percent(fet, tot), w - m - 36f, mid + 10f, paint(28f, pal.text, semi).apply {
+                textAlign = Paint.Align.RIGHT; if (!visitat) alpha = 150
+            })
+        }
+        y += alt3 + g
+
+        // 4. Ratxa i insígnies
+        val ample2 = (w - 2 * m - g) / 2f
+        val baix = h - m
+        caixa(m, y, m + ample2, baix)
+        c.drawText("${extra.ratxa}", m + 36f, y + 110f, paint(96f, pal.accent, negre))
+        c.drawText(if (extra.ratxa == 1) "dia de ratxa" else "dies de ratxa", m + 38f, y + 160f, paint(32f, pal.text, semi))
+        val l2 = m + ample2 + g
+        caixa(l2, y, w - m, baix)
+        c.drawText("${extra.insignies}", l2 + 36f, y + 110f, paint(96f, pal.accent, negre))
+        c.drawText("de ${extra.totalInsignies} insígnies", l2 + 38f, y + 160f, paint(32f, pal.text, semi))
+        if (o.data) {
+            val data = java.time.LocalDate.now().format(
+                java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.forLanguageTag("ca")),
+            )
+            c.drawText(data, w - m - 36f, baix - 30f, paint(26f, pal.text, semi).apply { textAlign = Paint.Align.RIGHT; alpha = 170 })
+        }
+        return bmp
+    }
+
+    private fun luminancia(color: Int): Double {
+        val r = (color shr 16 and 0xFF) / 255.0
+        val g = (color shr 8 and 0xFF) / 255.0
+        val b = (color and 0xFF) / 255.0
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
     }
 
     private fun dibuixaEscuts(c: Canvas, escuts: List<Bitmap>, x0: Float, y0: Float, alt: Float) {

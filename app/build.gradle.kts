@@ -13,18 +13,39 @@ android {
         applicationId = "cat.paisoscatalans"
         minSdk = 29
         targetSdk = 36
-        versionCode = 6
-        versionName = "0.6.0"
+        versionCode = 7
+        versionName = "1.0.0"
+    }
+
+    signingConfigs {
+        // Clau pròpia si es defineixen els secrets SIGNATURA_* (vegeu el README); si no, una clau
+        // de desenvolupament fixa, inclosa al repositori, perquè totes les compilacions tinguin la
+        // mateixa signatura i l'app es pugui actualitzar sense desinstal·lar-la.
+        create("publicacio") {
+            val fitxer = System.getenv("SIGNATURA_FITXER")
+            if (fitxer != null && file(fitxer).exists()) {
+                storeFile = file(fitxer)
+                storePassword = System.getenv("SIGNATURA_CONTRASENYA")
+                keyAlias = System.getenv("SIGNATURA_ALIES")
+                keyPassword = System.getenv("SIGNATURA_CONTRASENYA_CLAU") ?: System.getenv("SIGNATURA_CONTRASENYA")
+            } else {
+                storeFile = file("signatura-desenvolupament.jks")
+                storePassword = "paisoscatalans"
+                keyAlias = "paisoscatalans"
+                keyPassword = "paisoscatalans"
+            }
+        }
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("publicacio")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Signat amb la clau de depuració perquè l'APK de GitHub Actions es pugui instal·lar.
-            // Per publicar-la, substitueix-ho per la teva pròpia clau.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("publicacio")
         }
     }
 

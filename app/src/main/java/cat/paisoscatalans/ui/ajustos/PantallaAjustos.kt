@@ -252,13 +252,16 @@ fun PantallaAjustos(
 
         item {
             val escuts = LocalEscuts.current
+            val versio = remember {
+                runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: ""
+            }
             val llicencies = escuts.values.map { it.llicencia }.filter { it.isNotBlank() }.distinct()
             Text(
                 "${geo.municipis.size} municipis · ${geo.comarques.size} comarques · ${geo.vegueries.size} vegueries. " +
                     "Només municipis de parla catalana (sense la Vall d'Aran ni la Fenolleda). " +
                     "${geo.atribucio} · ${geo.versio}." +
                     (if (escuts.isNotEmpty()) " Escuts: Wikimedia Commons (${llicencies.joinToString(", ")})." else "") +
-                    "\nPaïsos Catalans · versió 0.6.0",
+                    "\nPaïsos Catalans · versió $versio",
                 style = MaterialTheme.typography.bodySmall,
                 color = cs.onSurfaceVariant,
                 modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 16.dp),

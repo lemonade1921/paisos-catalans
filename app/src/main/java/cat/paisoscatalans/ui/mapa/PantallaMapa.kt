@@ -22,6 +22,8 @@ import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
@@ -274,7 +276,7 @@ private fun Fitxa(
                     when (capa) {
                         Capa.MUNICIPIS -> geo.municipi[id]?.let { m ->
                             Text(m.nom, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
-                            val v = geo.vegueriaDe(m)?.let { " · Vegueria de ${it.nom}" } ?: ""
+                            val v = geo.vegueriaDe(m)?.let { " · ${it.nomComplet}" } ?: ""
                             Text("${geo.comarcaDe(m).nom}$v · ${geo.territoriDe(m).nom}",
                                 style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                         }
@@ -285,7 +287,7 @@ private fun Fitxa(
                                 style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                         }
                         Capa.VEGUERIES -> geo.vegueria[id]?.let { v ->
-                            Text("Vegueria de ${v.nom}", style = MaterialTheme.typography.headlineSmall,
+                            Text(v.nomComplet, style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.ExtraBold)
                             val cs2 = geo.comarquesDeVegueria[v.id].orEmpty()
                             Text("${cs2.count { it.id in progres.comarquesVisitades }} de ${cs2.size} comarques visitades",
@@ -295,24 +297,28 @@ private fun Fitxa(
                 }
                 IconButton(onClick = onTanca) { Icon(Icons.Filled.Close, contentDescription = "Tanca") }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 when (capa) {
                     Capa.MUNICIPIS -> {
                         val m = geo.municipi[id]
                         if (m != null) {
                             val visitat = id in estat.visitats
+                            val estret = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
                             if (visitat) {
-                                FilledTonalButton(onClick = { onCommuta(id) }) {
-                                    Icon(Icons.Filled.Check, contentDescription = null)
-                                    Text("  Visitat")
+                                FilledTonalButton(onClick = { onCommuta(id) }, Modifier.weight(1f), contentPadding = estret) {
+                                    Icon(Icons.Filled.Check, contentDescription = null, Modifier.size(18.dp))
+                                    Text("Visitat", Modifier.padding(start = 8.dp), maxLines = 1, softWrap = false)
                                 }
                             } else {
-                                Button(onClick = { onCommuta(id) }) {
-                                    Icon(Icons.Filled.Add, contentDescription = null)
-                                    Text("  Marca com a visitat")
+                                Button(onClick = { onCommuta(id) }, Modifier.weight(1f), contentPadding = estret) {
+                                    Icon(Icons.Filled.Add, contentDescription = null, Modifier.size(18.dp))
+                                    Text("Marca com a visitat", Modifier.padding(start = 8.dp), maxLines = 1, softWrap = false,
+                                        overflow = TextOverflow.Ellipsis)
                                 }
                             }
-                            FilledTonalButton(onClick = { onObreComarca(m.comarca) }) { Text("Comarca") }
+                            FilledTonalButton(onClick = { onObreComarca(m.comarca) }, contentPadding = estret) {
+                                Text("Comarca", maxLines = 1, softWrap = false)
+                            }
                         }
                     }
                     Capa.COMARQUES -> Button(onClick = { onObreComarca(id) }) { Text("Veure municipis") }

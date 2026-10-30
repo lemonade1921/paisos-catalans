@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import cat.paisoscatalans.compartir.Compartir
 import cat.paisoscatalans.compartir.Desti
+import cat.paisoscatalans.compartir.Extra
 import cat.paisoscatalans.compartir.Format
 import cat.paisoscatalans.compartir.Opcions
 import cat.paisoscatalans.compartir.Paleta
@@ -69,9 +70,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /** Opcions de la imatge que es poden activar o desactivar. */
-private enum class Opcio(val etiqueta: String, val nomesImatge: Boolean = true) {
-    MAPA("Mapa"),
-    CONTORNS("Contorns"),
+private enum class Opcio(val etiqueta: String, val nomesImatge: Boolean = true, val ambMapa: Boolean = false) {
+    MAPA("Mapa", ambMapa = true),
+    CONTORNS("Contorns", ambMapa = true),
     NOM("Nom"),
     PERCENTATGE("Percentatge"),
     COMARQUES("Comarques i vegueries", nomesImatge = false),
@@ -90,12 +91,14 @@ fun FullCompartir(
     progres: Progres,
     nom: String,
     article: String,
+    extra: Extra = Extra(),
+    formatInicial: Format = Format.HISTORIA,
     onTanca: () -> Unit,
 ) {
     val ctx = LocalContext.current
     val cs = MaterialTheme.colorScheme
     val escuts = LocalEscuts.current
-    var format by rememberSaveable { mutableStateOf(Format.HISTORIA) }
+    var format by rememberSaveable { mutableStateOf(formatInicial) }
     var actives by remember {
         mutableStateOf(setOf(Opcio.MAPA, Opcio.CONTORNS, Opcio.NOM, Opcio.PERCENTATGE, Opcio.COMARQUES))
     }
@@ -126,7 +129,7 @@ fun FullCompartir(
     LaunchedEffect(opcions, progres, nom, article) {
         generant = true
         imatge = withContext(Dispatchers.Default) {
-            Compartir.renderitza(geo, model, progres, nom, article, opcions, bitmapsEscuts)
+            Compartir.renderitza(geo, model, progres, nom, article, opcions, bitmapsEscuts, extra)
         }
         generant = false
     }
@@ -174,7 +177,7 @@ fun FullCompartir(
                         selected = o in actives,
                         onClick = { actives = if (o in actives) actives - o else actives + o },
                         label = { Text(o.etiqueta) },
-                        enabled = format != Format.TEXT || !o.nomesImatge,
+                        enabled = (format != Format.TEXT || !o.nomesImatge) && !(format == Format.RESUM && o.ambMapa),
                     )
                 }
             }

@@ -64,7 +64,7 @@ fun PantallaComarca(
     val municipis = geo.municipisDeComarca[comarcaId].orEmpty()
     var filtre by rememberSaveable { mutableStateOf(Filtre.TOTS) }
     val fets = municipis.count { it.id in estat.visitats }
-    val vegueria = comarca.vegueria?.let { geo.vegueria[it]?.nom }
+    val vegueria = comarca.vegueria?.let { geo.vegueria[it]?.nomComplet }
     val territori = geo.territori[comarca.territori]?.nom ?: ""
     // Andorra, l'Alguer, el Carxe: la comarca és tot el territori; no repetim el nom
     val sensArticle = { n: String -> normalitza(n).removePrefix("el ").removePrefix("la ").removePrefix("l'") }
@@ -81,7 +81,7 @@ fun PantallaComarca(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Torna")
                     }
                     Text(
-                        vegueria?.let { "Vegueria de $it" } ?: if (totElTerritori) "Territori" else territori,
+                        vegueria ?: if (totElTerritori) "Territori" else territori,
                         style = MaterialTheme.typography.labelLarge,
                         color = cs.onSurfaceVariant,
                         modifier = Modifier.weight(1f).padding(start = 12.dp),
