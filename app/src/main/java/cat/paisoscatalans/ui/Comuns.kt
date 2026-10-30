@@ -181,7 +181,7 @@ fun SelectorArticle(
                 .fillMaxWidth()
                 .menuAnchor(androidx.compose.material3.ExposedDropdownMenuAnchorType.PrimaryNotEditable),
         )
-        androidx.compose.material3.ExposedDropdownMenu(expanded = obert, onDismissRequest = { obert = false }) {
+        ExposedDropdownMenu(expanded = obert, onDismissRequest = { obert = false }) {
             opcions.forEach { (clau, text) ->
                 androidx.compose.material3.DropdownMenuItem(
                     text = { Text(text) },
