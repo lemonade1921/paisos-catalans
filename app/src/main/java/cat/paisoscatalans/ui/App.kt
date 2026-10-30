@@ -76,9 +76,13 @@ private enum class Pestanya(val etiqueta: String, val actiu: ImageVector, val in
 @Composable
 fun App(vm: AppViewModel = viewModel(), obre: String? = null, onObert: () -> Unit = {}) {
     val estat by vm.estat.collectAsStateWithLifecycle()
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val escuts = remember { Escuts.carrega(ctx) }
     TemaPaisos(ModeTema.de(estat.tema)) {
-        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            Contingut(vm, obre, onObert)
+        androidx.compose.runtime.CompositionLocalProvider(LocalEscuts provides escuts) {
+            Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                Contingut(vm, obre, onObert)
+            }
         }
     }
 }

@@ -69,7 +69,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun acabaBenvinguda(nom: String, article: String) = viewModelScope.launch {
-        magatzem.actualitza { it.copy(nom = nom.trim().take(40), article = Article.valid(article), introduit = true) }
+        magatzem.actualitza {
+            val n = nom.trim().take(40)
+            it.copy(nom = n, article = Article.ajusta(n, article), introduit = true)
+        }
     }
 
     /** Escriu la còpia de seguretat al fitxer que l'usuari ha triat. */
@@ -117,7 +120,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun canviaNom(nom: String) = viewModelScope.launch {
-        magatzem.actualitza { it.copy(nom = nom.trim().take(40)) }
+        magatzem.actualitza { e ->
+            val n = nom.trim().take(40)
+            e.copy(nom = n, article = Article.ajusta(n, e.article))
+        }
     }
 
     /** Copia la foto escollida (reduïda a 512 px) dins l'app; no en guardem l'original. */

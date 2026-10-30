@@ -34,6 +34,14 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.RestorePage
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.graphics.vector.ImageVector
+import cat.paisoscatalans.ui.GrupOpcions
+import cat.paisoscatalans.ui.LocalEscuts
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -166,30 +174,17 @@ fun PantallaAjustos(
 
         // ---- Aparença
         item { Titol("Aparença") }
-        ModeTema.entries.forEachIndexed { i, m ->
-            item(key = "tema-${m.clau}") {
-                val sel = m == tema
-                Fila(i, ModeTema.entries.size, onClick = { onTema(m) }, seleccionada = sel) {
-                    ListItem(
-                        colors = colorsFila,
-                        leadingContent = { RadioButton(selected = sel, onClick = null) },
-                        headlineContent = { Text(m.etiqueta) },
-                        supportingContent = { Text(m.descripcio) },
-                        trailingContent = {
-                            val (fons, sup, accent) = mostra(m, sistemaFosc)
-                            Box(
-                                Modifier
-                                    .size(40.dp)
-                                    .background(fons, RoundedCornerShape(12.dp))
-                                    .border(1.dp, cs.outlineVariant, RoundedCornerShape(12.dp)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Box(Modifier.size(24.dp).background(sup, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
-                                    Box(Modifier.size(10.dp).background(accent, CircleShape))
-                                }
-                            }
-                        },
+        item {
+            Surface(color = cs.surfaceContainer, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    GrupOpcions(
+                        opcions = ModeTema.entries,
+                        seleccionada = tema,
+                        etiqueta = { if (it == ModeTema.SISTEMA) "Sistema" else it.etiqueta },
+                        onTria = onTema,
                     )
+                    Text(tema.descripcio, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 4.dp))
                 }
             }
         }
@@ -197,115 +192,77 @@ fun PantallaAjustos(
         // ---- Joc i insígnies
         item { Titol("Joc i insígnies") }
         item {
-            Fila(0, nJoc, onClick = { activaRecordatori(!recordatori) }) {
-                ListItem(
-                    colors = colorsFila,
-                    leadingContent = { Icon(Icons.Filled.NotificationsActive, contentDescription = null) },
-                    headlineContent = { Text("Recordatori diari") },
-                    supportingContent = { Text("Un avís cada dia si encara no has jugat al municipi del dia") },
-                    trailingContent = { Switch(checked = recordatori, onCheckedChange = { activaRecordatori(it) }) },
-                )
-            }
-        }
-        if (recordatori) {
-            item {
-                Fila(1, nJoc, onClick = { triantHora = true }) {
-                    ListItem(
-                        colors = colorsFila,
-                        leadingContent = { Icon(Icons.Filled.Alarm, contentDescription = null) },
-                        headlineContent = { Text("Hora de l'avís") },
-                        supportingContent = { Text("Toca per canviar-la") },
-                        trailingContent = {
-                            Text(hora(horaRecordatori), style = MaterialTheme.typography.headlineSmall, color = cs.primary)
-                        },
-                    )
+            Fila(0, 2, onClick = { activaRecordatori(!recordatori) }) {
+                FilaCompacta(Icons.Filled.NotificationsActive, "Recordatori diari", "Si encara no has jugat") {
+                    if (recordatori) {
+                        AssistChip(
+                            onClick = { triantHora = true },
+                            label = { Text(hora(horaRecordatori)) },
+                            leadingIcon = { Icon(Icons.Filled.Alarm, contentDescription = "Canvia l'hora", modifier = Modifier.size(18.dp)) },
+                            modifier = Modifier.padding(end = 8.dp),
+                        )
+                    }
+                    Switch(checked = recordatori, onCheckedChange = { activaRecordatori(it) })
                 }
             }
         }
         item {
-            Fila(nJoc - 1, nJoc, onClick = { onConfeti(!confeti) }) {
-                ListItem(
-                    colors = colorsFila,
-                    leadingContent = { Icon(Icons.Filled.Celebration, contentDescription = null) },
-                    headlineContent = { Text("Confeti") },
-                    supportingContent = { Text("Celebra amb confeti cada insígnia nova") },
-                    trailingContent = { Switch(checked = confeti, onCheckedChange = onConfeti) },
-                )
+            Fila(1, 2, onClick = { onConfeti(!confeti) }) {
+                FilaCompacta(Icons.Filled.Celebration, "Confeti", "En aconseguir una insígnia") {
+                    Switch(checked = confeti, onCheckedChange = onConfeti)
+                }
             }
         }
 
         // ---- Còpia de seguretat
         item { Titol("Còpia de seguretat") }
         item {
-            Fila(0, 2, onClick = { desa.launch("paisos-catalans-${LocalDate.now()}.json") }) {
-                ListItem(
-                    colors = colorsFila,
-                    leadingContent = { Icon(Icons.Filled.Save, contentDescription = null) },
-                    headlineContent = { Text("Desa una còpia") },
-                    supportingContent = { Text("Llocs visitats, partides i ratxes, insígnies, perfil i ajustos en un fitxer") },
-                )
-            }
-        }
-        item {
-            Fila(1, 2, onClick = { obre.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }) {
-                ListItem(
-                    colors = colorsFila,
-                    leadingContent = { Icon(Icons.Filled.RestorePage, contentDescription = null) },
-                    headlineContent = { Text("Restaura una còpia") },
-                    supportingContent = { Text("Substitueix les dades actuals per les d'un fitxer de còpia") },
-                )
+            Surface(color = cs.surfaceContainer, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilledTonalButton(
+                        onClick = { desa.launch("paisos-catalans-${LocalDate.now()}.json") },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(Icons.Filled.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Text("  Desa")
+                    }
+                    OutlinedButton(
+                        onClick = { obre.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(Icons.Filled.RestorePage, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Text("  Restaura")
+                    }
+                }
             }
         }
 
         // ---- Privadesa i dades
         item { Titol("Privadesa i dades") }
         item {
-            Fila(0, 3) {
-                ListItem(
-                    colors = colorsFila,
-                    leadingContent = { Icon(Icons.Filled.Lock, contentDescription = null) },
-                    headlineContent = { Text("Tot es queda al telèfon") },
-                    supportingContent = { Text("Sense connexió a Internet, sense comptes, anuncis ni estadístiques d'ús.") },
-                )
+            Fila(0, 2) {
+                FilaCompacta(Icons.Filled.Lock, "Tot es queda al telèfon", "Sense Internet, comptes ni anuncis") {}
             }
         }
         item {
-            Fila(1, 3) {
-                ListItem(
-                    colors = colorsFila,
-                    leadingContent = { Icon(Icons.Filled.Map, contentDescription = null) },
-                    headlineContent = { Text("Dades dels mapes") },
-                    supportingContent = {
-                        Text(
-                            "${geo.territoris.joinToString(", ") { it.nom }}. Només municipis de parla catalana " +
-                                "(sense la Vall d'Aran ni la Fenolleda, que són occitanoparlants). " +
-                                "${geo.municipis.size} municipis, ${geo.comarques.size} comarques, " +
-                                "${geo.vegueries.size} vegueries. ${geo.atribucio} · ${geo.versio}",
-                        )
-                    },
-                )
-            }
-        }
-        item {
-            Fila(2, 3, onClick = { confirmaEsborrar = true }) {
-                ListItem(
-                    colors = colorsFila,
-                    leadingContent = { Icon(Icons.Filled.DeleteForever, contentDescription = null, tint = cs.error) },
-                    headlineContent = { Text("Esborra totes les dades", color = cs.error) },
-                    supportingContent = { Text("Nom, foto, llocs visitats i historial del joc") },
-                )
+            Fila(1, 2, onClick = { confirmaEsborrar = true }) {
+                FilaCompacta(Icons.Filled.DeleteForever, "Esborra totes les dades", null, perill = true) {}
             }
         }
 
         item {
-            Row(
-                Modifier.fillMaxWidth().padding(top = 16.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(Icons.Filled.Info, contentDescription = null, tint = cs.onSurfaceVariant, modifier = Modifier.size(16.dp))
-                Text("  Països Catalans · versió 0.5.0", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-            }
+            val escuts = LocalEscuts.current
+            val llicencies = escuts.values.map { it.llicencia }.filter { it.isNotBlank() }.distinct()
+            Text(
+                "${geo.municipis.size} municipis · ${geo.comarques.size} comarques · ${geo.vegueries.size} vegueries. " +
+                    "Només municipis de parla catalana (sense la Vall d'Aran ni la Fenolleda). " +
+                    "${geo.atribucio} · ${geo.versio}." +
+                    (if (escuts.isNotEmpty()) " Escuts: Wikimedia Commons (${llicencies.joinToString(", ")})." else "") +
+                    "\nPaïsos Catalans · versió 0.6.0",
+                style = MaterialTheme.typography.bodySmall,
+                color = cs.onSurfaceVariant,
+                modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 16.dp),
+            )
         }
     }
 
@@ -366,7 +323,7 @@ private fun Titol(text: String) {
         text,
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 12.dp, top = 20.dp, bottom = 6.dp),
+        modifier = Modifier.padding(start = 12.dp, top = 14.dp, bottom = 4.dp),
     )
 }
 
@@ -388,5 +345,30 @@ private fun Fila(
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
     ) {
         Column { contingut() }
+    }
+}
+
+/** Fila d'ajust compacta: icona, títol (i una línia curta) i un control a la dreta. */
+@Composable
+private fun FilaCompacta(
+    icona: ImageVector,
+    titol: String,
+    subtitol: String?,
+    perill: Boolean = false,
+    control: @Composable RowScope.() -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icona, contentDescription = null, tint = if (perill) cs.error else cs.onSurfaceVariant)
+        Column(Modifier.weight(1f).padding(start = 16.dp)) {
+            Text(titol, style = MaterialTheme.typography.bodyLarge, color = if (perill) cs.error else cs.onSurface)
+            if (subtitol != null) {
+                Text(subtitol, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            }
+        }
+        control()
     }
 }

@@ -10,7 +10,7 @@ Disseny: Material 3 Expressive (Jetpack Compose). Tota l'app és en català.
 
 ## Funcions
 
-- **Benvinguda** que presenta l'app, demana el nom i l'article personal (el, en, la, na, l', n') i permet
+- **Benvinguda** que presenta l'app, demana el nom i l'article personal i permet
   restaurar una còpia de seguretat o començar de zero.
 - **Mapa** vectorial amb tres capes (Municipis / Comarques / Vegueries) dins del mateix mapa, zoom, cerca
   i mode de pantalla completa. Toca un municipi per marcar-lo com a visitat.
@@ -23,9 +23,11 @@ Disseny: Material 3 Expressive (Jetpack Compose). Tota l'app és en català.
 - **Ajustos**: nom, foto i article personal; recordatori diari del joc amb l'hora que triïs (notificació
   local, sense Internet); confeti; aparença Segueix el sistema / Clar / Fosc / OLED (negre pur) i **còpia de seguretat**:
   desa i restaura en un fitxer JSON els llocs visitats, les partides (ratxes i insígnies), el perfil i els ajustos.
-- **Comparteix** una imatge (format història o publicació, amb 8 combinacions de colors) o un text a
-  Instagram Stories, Instagram Direct, WhatsApp, Missatges, Signal, Molly, Mastodon i Bluesky (amb la icona
-  real de cada app instal·lada), o desa la imatge a la galeria.
+- **Comparteix** una imatge (format història o publicació; 8 paletes de colors; mapa, contorns, nom,
+  percentatge, comarques i vegueries, escuts i data opcionals) o un text. Només surten les apps instal·lades
+  (Instagram Stories i Direct, WhatsApp, Missatges, Signal, Molly, Mastodon, Bluesky), amb la seva icona real.
+- **Escuts** de cada territori (insígnies, progrés, imatges compartides), descarregats en compilar de
+  Wikidata/Wikimedia Commons amb `tools/escuts.py` (propietat P94); se'n desa la llicència i l'autoria.
 
 ## Privadesa i funcionament sense connexió
 

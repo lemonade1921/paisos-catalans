@@ -18,6 +18,35 @@ object Article {
 
     fun valid(a: String): String = a.takeIf { c -> opcions.any { it.first == c } }.orEmpty()
 
+    /** Comença per vocal (o h muda + vocal) i, per tant, l'article s'apostrofa. */
+    fun apostrofa(nom: String): Boolean = vocal(nom)
+
+    /**
+     * Opcions que tenen sentit per a aquest nom: davant de vocal només L' i N';
+     * davant de consonant només El, En, La i Na. Sempre hi ha "Cap".
+     */
+    fun opcionsPer(nom: String): List<Pair<String, String>> =
+        if (nom.isNotBlank() && vocal(nom)) opcions.filter { it.first in setOf("", "l'", "n'") }
+        else opcions.filter { it.first in setOf("", "el", "en", "la", "na") }
+
+    /**
+     * Adapta l'article quan canvia el nom: "la"/"el" → "l'" i "en"/"na" → "n'" davant de vocal;
+     * "n'" → "en" davant de consonant. "l'" no indica si és el o la, i llavors queda en "Cap".
+     */
+    fun ajusta(nom: String, article: String): String {
+        val a = valid(article)
+        if (a.isEmpty() || nom.isBlank()) return a
+        return if (vocal(nom)) when (a) {
+            "el", "la" -> "l'"
+            "en", "na" -> "n'"
+            else -> a
+        } else when (a) {
+            "n'" -> "en"
+            "l'" -> ""
+            else -> a
+        }
+    }
+
     private const val VOCALS = "aeiouàáèéíïòóúüAEIOUÀÁÈÉÍÏÒÓÚÜ"
 
     /** Comença per vocal o per h muda + vocal ("Arnau", "Helena"). */

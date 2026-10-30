@@ -53,7 +53,17 @@ enum class Paleta(
     NIT("Nit", 0xFF000000.toInt(), 0xFF2A2A2A.toInt(), 0xFFFFB59A.toInt(), 0xFFFFFFFF.toInt(), 0xFFFFB59A.toInt()),
 }
 
-data class Opcions(val format: Format, val mapa: Boolean, val comarques: Boolean, val paleta: Paleta = Paleta.TERRACOTA)
+data class Opcions(
+    val format: Format,
+    val mapa: Boolean,
+    val comarques: Boolean,
+    val paleta: Paleta = Paleta.TERRACOTA,
+    val nom: Boolean = true,
+    val percentatge: Boolean = true,
+    val escuts: Boolean = false,
+    val data: Boolean = false,
+    val contorns: Boolean = true,
+)
 
 /**
  * Destinacions. Totes funcionen amb intents locals d'Android: l'app no es connecta enlloc.
@@ -125,7 +135,15 @@ object Compartir {
         return DestiResolt(paquet, component?.takeIf { d.activitat != null }, icona)
     }
 
-    fun renderitza(geo: Geo, model: ModelMapa, p: Progres, nom: String, article: String, o: Opcions): Bitmap? {
+    fun renderitza(
+        geo: Geo,
+        model: ModelMapa,
+        p: Progres,
+        nom: String,
+        article: String,
+        o: Opcions,
+        escuts: Map<String, Bitmap> = emptyMap(),
+    ): Bitmap? {
         if (o.format == Format.TEXT) return null
         val w = o.format.amplada
         val h = o.format.alcada
@@ -139,34 +157,52 @@ object Compartir {
             textSize = mida; this.color = color; typeface = tf; letterSpacing = espai
         }
         val n = p.municipisVisitats.size
-        val capcalera = if (nom.isNotBlank()) "EL MAPA ${Article.genitiu(nom, article).uppercase()}" else "PAÏSOS CATALANS"
+        val capcalera = if (o.nom && nom.isNotBlank()) "EL MAPA ${Article.genitiu(nom, article).uppercase()}" else "PAÏSOS CATALANS"
+        val linia1 = "municipis visitats" + if (o.percentatge) " · ${percent(n, geo.municipis.size)}" else ""
+        val data = java.time.LocalDate.now().format(
+            java.time.format.DateTimeFormatter.ofPattern("d MMMM 'de' yyyy", java.util.Locale.forLanguageTag("ca")),
+        )
+        val llistaEscuts = if (o.escuts) geo.territoris.mapNotNull { escuts[it.id] } else emptyList()
 
         if (o.format == Format.HISTORIA) {
             c.drawText(capcalera, 96f, 170f, paint(42f, pal.text, semi, 0.12f))
-            if (o.mapa) dibuixaMapa(c, model, p, pal, Rect(80f, 240f, w - 80f, 1260f))
+            if (o.mapa) dibuixaMapa(c, model, p, pal, o.contorns, Rect(80f, 240f, w - 80f, 1260f))
             c.drawText(milers(n), 90f, 1530f, paint(260f, pal.accent, negre, -0.03f))
-            c.drawText("municipis visitats · ${percent(n, geo.municipis.size)}", 96f, 1610f, paint(52f, pal.text, semi))
+            c.drawText(linia1, 96f, 1610f, paint(52f, pal.text, semi))
             if (o.comarques) {
                 c.drawText("${p.comarquesVisitades.size} comarques · ${p.vegueriesVisitades.size} vegueries",
                     96f, 1690f, paint(44f, pal.text, semi))
             }
-            c.drawText("#PaïsosCatalans", 96f, 1830f, paint(40f, pal.accent, semi))
+            if (llistaEscuts.isNotEmpty()) dibuixaEscuts(c, llistaEscuts, 96f, 1740f, 110f)
+            if (o.data) c.drawText(data, 96f, 1880f, paint(34f, pal.text, semi).apply { alpha = 190 })
         } else {
             c.drawText(capcalera, 72f, 120f, paint(34f, pal.text, semi, 0.12f))
             val esquerra = if (o.mapa) 470f else w - 72f
-            c.drawText(milers(n), 64f, 600f, paint(if (o.mapa) 190f else 260f, pal.accent, negre, -0.03f))
-            c.drawText("municipis · ${percent(n, geo.municipis.size)}", 72f, 680f, paint(44f, pal.text, semi))
+            c.drawText(milers(n), 64f, 560f, paint(if (o.mapa) 190f else 260f, pal.accent, negre, -0.03f))
+            c.drawText(if (o.percentatge) "municipis · ${percent(n, geo.municipis.size)}" else "municipis",
+                72f, 640f, paint(44f, pal.text, semi))
             if (o.comarques) {
-                c.drawText("${p.comarquesVisitades.size} comarques", 72f, 750f, paint(38f, pal.text, semi))
-                c.drawText("${p.vegueriesVisitades.size} vegueries", 72f, 805f, paint(38f, pal.text, semi))
+                c.drawText("${p.comarquesVisitades.size} comarques", 72f, 710f, paint(38f, pal.text, semi))
+                c.drawText("${p.vegueriesVisitades.size} vegueries", 72f, 765f, paint(38f, pal.text, semi))
             }
-            c.drawText("#PaïsosCatalans", 72f, 990f, paint(34f, pal.accent, semi))
-            if (o.mapa) dibuixaMapa(c, model, p, pal, Rect(esquerra, 160f, w - 40f, h - 60f))
+            if (llistaEscuts.isNotEmpty()) dibuixaEscuts(c, llistaEscuts, 72f, 820f, if (o.mapa) 52f else 80f)
+            if (o.data) c.drawText(data, 72f, 1020f, paint(30f, pal.text, semi).apply { alpha = 190 })
+            if (o.mapa) dibuixaMapa(c, model, p, pal, o.contorns, Rect(esquerra, 160f, w - 40f, h - 60f))
         }
         return bmp
     }
 
-    private fun dibuixaMapa(c: Canvas, model: ModelMapa, p: Progres, pal: Paleta, area: Rect) {
+    private fun dibuixaEscuts(c: Canvas, escuts: List<Bitmap>, x0: Float, y0: Float, alt: Float) {
+        var x = x0
+        val p = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        for (b in escuts) {
+            val ample = alt * b.width / b.height.coerceAtLeast(1)
+            c.drawBitmap(b, null, android.graphics.RectF(x, y0, x + ample, y0 + alt), p)
+            x += ample + alt * 0.25f
+        }
+    }
+
+    private fun dibuixaMapa(c: Canvas, model: ModelMapa, p: Progres, pal: Paleta, contorns: Boolean, area: Rect) {
         val r = model.limits
         val k = min(area.width / r.width, area.height / r.height)
         val fons = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = pal.mapa; style = Paint.Style.FILL }
@@ -178,7 +214,7 @@ object Compartir {
         c.translate(area.center.x - r.center.x * k, area.center.y - r.center.y * k)
         c.scale(k, k)
         for (e in model.municipis) c.drawPath(e.path.asAndroidPath(), if (e.id in p.municipisVisitats) vist else fons)
-        for (e in model.comarques) c.drawPath(e.path.asAndroidPath(), vora)
+        if (contorns) for (e in model.comarques) c.drawPath(e.path.asAndroidPath(), vora)
         model.requadreAlguer?.let {
             c.drawRoundRect(it.left, it.top, it.right, it.bottom, it.width * 0.18f, it.width * 0.18f,
                 Paint(Paint.ANTI_ALIAS_FLAG).apply { color = pal.accent; style = Paint.Style.STROKE; strokeWidth = 2f / k })

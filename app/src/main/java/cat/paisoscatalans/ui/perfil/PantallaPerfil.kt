@@ -26,6 +26,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Lock
@@ -73,6 +74,7 @@ import cat.paisoscatalans.data.Insignies
 import cat.paisoscatalans.data.JocDiari
 import cat.paisoscatalans.data.Progres
 import cat.paisoscatalans.data.Ratxa
+import cat.paisoscatalans.ui.EscutTerritori
 import cat.paisoscatalans.ui.Seccio
 import cat.paisoscatalans.ui.SelectorArticle
 
@@ -135,26 +137,34 @@ fun EditorPerfil(
     var nom by rememberSaveable(estat.nom) { mutableStateOf(estat.nom) }
     val obreFotos = { tria.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Avatar(foto, nom, 88.dp, onClick = obreFotos)
-            Column(Modifier.padding(start = 12.dp)) {
-                TextButton(onClick = obreFotos) { Text(if (foto == null) "Tria una foto" else "Canvia la foto") }
-                if (foto != null) TextButton(onClick = onTreuFoto) { Text("Treu la foto") }
+            Box {
+                Avatar(foto, nom, 64.dp, onClick = obreFotos)
+                if (foto != null) {
+                    androidx.compose.material3.SmallFloatingActionButton(
+                        onClick = onTreuFoto,
+                        modifier = Modifier.align(Alignment.BottomEnd).size(26.dp),
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    ) {
+                        Icon(androidx.compose.material.icons.Icons.Filled.Close, contentDescription = "Treu la foto",
+                            modifier = Modifier.size(14.dp))
+                    }
+                }
             }
+            OutlinedTextField(
+                value = nom,
+                onValueChange = { nom = it.take(40) },
+                label = { Text("El teu nom") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { onNom(nom); focus.clearFocus() }),
+                trailingIcon = {
+                    if (nom != estat.nom) TextButton(onClick = { onNom(nom); focus.clearFocus() }) { Text("Desa") }
+                },
+                modifier = Modifier.weight(1f).padding(start = 12.dp),
+            )
         }
-        OutlinedTextField(
-            value = nom,
-            onValueChange = { nom = it.take(40) },
-            label = { Text("El teu nom") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { onNom(nom); focus.clearFocus() }),
-            trailingIcon = {
-                if (nom != estat.nom) TextButton(onClick = { onNom(nom); focus.clearFocus() }) { Text("Desa") }
-            },
-            modifier = Modifier.fillMaxWidth(),
-        )
         SelectorArticle(nom, estat.article, onTria = onArticle, modifier = Modifier.fillMaxWidth())
     }
 }
@@ -212,7 +222,7 @@ fun PantallaPerfil(
                 Xifra("${progres.municipisVisitats.size}", "municipis", Modifier.weight(1f))
                 Xifra("${progres.comarquesVisitades.size}", "comarques", Modifier.weight(1f))
                 Xifra("${progres.vegueriesVisitades.size}", "vegueries", Modifier.weight(1f))
-                Xifra("$ratxa", "ratxa (màx. $ratxaMax)", Modifier.weight(1f))
+                Xifra("$ratxa", "ratxa", Modifier.weight(1f))
             }
         }
 
@@ -275,7 +285,10 @@ private fun TargetaInsignia(i: Insignia, forma: Shape, icona: ImageVector, onToc
             .padding(vertical = 6.dp, horizontal = 2.dp),
     ) {
         Box(Modifier.size(72.dp).background(fons, forma), contentAlignment = Alignment.Center) {
-            Icon(icona, contentDescription = i.descripcio, tint = tinta, modifier = Modifier.size(30.dp))
+            // Les insígnies de territori porten l'escut (de Wikimedia Commons) en comptes d'una icona
+            val ambEscut = i.id.startsWith("t-") && i.id != "t-tots" &&
+                EscutTerritori(i.id.removePrefix("t-"), 44.dp, apagat = !i.aconseguida)
+            if (!ambEscut) Icon(icona, contentDescription = i.descripcio, tint = tinta, modifier = Modifier.size(30.dp))
         }
         Text(
             i.titol, style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center,

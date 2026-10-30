@@ -40,6 +40,10 @@ jobs:
           pip install -r tools/requirements.txt
           python tools/build_data.py --cache .cache-osm
 
+      - name: Escuts dels territoris (Wikidata / Wikimedia Commons)
+        if: hashFiles('app/src/main/assets/escuts/escuts.json') == ''
+        run: python3 tools/escuts.py
+
       - name: Desa els extractes d'OSM
         if: steps.dades.outputs.cal == 'true' && always()
         uses: actions/cache/save@v4

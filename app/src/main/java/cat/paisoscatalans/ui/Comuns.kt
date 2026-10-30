@@ -18,6 +18,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -142,8 +144,11 @@ fun percent(fet: Int, total: Int): String =
 /** Formata nombres amb punt de milers, a la catalana: 1.783 */
 fun milers(n: Int): String = "%,d".format(n).replace(',', '.')
 
-/** Tria de l'article personal amb una previsualització de com sortirà el nom. */
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+/**
+ * Tria de l'article personal en un desplegable. Només mostra les opcions que encaixen amb
+ * el nom (L'/N' davant de vocal; El/En/La/Na davant de consonant) i adapta la tria si el
+ * nom canvia.
+ */
 @Composable
 fun SelectorArticle(
     nom: String,
@@ -151,26 +156,38 @@ fun SelectorArticle(
     onTria: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val cs = MaterialTheme.colorScheme
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Article personal", style = MaterialTheme.typography.titleSmall)
-        androidx.compose.foundation.layout.FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            cat.paisoscatalans.data.Article.opcions.forEach { (clau, etiqueta) ->
-                androidx.compose.material3.FilterChip(
-                    selected = article == clau,
-                    onClick = { onTria(clau) },
-                    label = { Text(etiqueta) },
+    val opcions = cat.paisoscatalans.data.Article.opcionsPer(nom)
+    // Si el nom canvia de vocal a consonant (o al revés), l'article s'adapta tot sol
+    val ajustat = cat.paisoscatalans.data.Article.ajusta(nom, article)
+    androidx.compose.runtime.LaunchedEffect(nom, article) { if (ajustat != article) onTria(ajustat) }
+    var obert by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val etiqueta = opcions.firstOrNull { it.first == ajustat }?.second ?: "Cap"
+    val mostra = nom.trim().ifEmpty { "Maria" }
+
+    androidx.compose.material3.ExposedDropdownMenuBox(
+        expanded = obert,
+        onExpandedChange = { obert = it },
+        modifier = modifier,
+    ) {
+        androidx.compose.material3.OutlinedTextField(
+            value = etiqueta,
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            label = { Text("Article personal") },
+            supportingText = { Text("«El mapa ${cat.paisoscatalans.data.Article.genitiu(mostra, ajustat)}»") },
+            trailingIcon = { androidx.compose.material3.ExposedDropdownMenuDefaults.TrailingIcon(expanded = obert) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(androidx.compose.material3.ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+        )
+        androidx.compose.material3.ExposedDropdownMenu(expanded = obert, onDismissRequest = { obert = false }) {
+            opcions.forEach { (clau, text) ->
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(text) },
+                    onClick = { onTria(clau); obert = false },
                 )
             }
         }
-        val mostra = nom.trim().ifEmpty { "Maria" }
-        Text(
-            "Així sortirà: «El mapa ${cat.paisoscatalans.data.Article.genitiu(mostra, article)}»",
-            style = MaterialTheme.typography.bodySmall,
-            color = cs.onSurfaceVariant,
-        )
     }
 }

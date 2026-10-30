@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import cat.paisoscatalans.data.Insignia
+import cat.paisoscatalans.ui.EscutTerritori
 import kotlinx.coroutines.launch
 import kotlin.math.sin
 
@@ -266,7 +267,9 @@ fun Medalla3D(i: Insignia, forma: Shape, icona: ImageVector, modifier: Modifier 
 
         if (davant) {
             Cara(a, camera, forma, clar, base, fosc, s) {
-                Icon(icona, contentDescription = null, tint = tinta, modifier = Modifier.size(96.dp))
+                val ambEscut = i.id.startsWith("t-") && i.id != "t-tots" &&
+                    EscutTerritori(i.id.removePrefix("t-"), 110.dp, apagat = !guanyada)
+                if (!ambEscut) Icon(icona, contentDescription = null, tint = tinta, modifier = Modifier.size(96.dp))
                 if (!guanyada) {
                     Icon(
                         Icons.Filled.Lock, contentDescription = null, tint = tinta,

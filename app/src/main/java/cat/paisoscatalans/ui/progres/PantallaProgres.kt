@@ -1,6 +1,12 @@
 package cat.paisoscatalans.ui.progres
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.ui.unit.sp
+import cat.paisoscatalans.ui.EscutTerritori
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -82,8 +88,14 @@ fun PantallaProgres(
                 Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
                     Galeta(percent(nm, geo.municipis.size), 100.dp)
                     Column(Modifier.padding(start = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("$nm de ${milers(geo.municipis.size)} municipis", color = cs.onPrimary,
-                            style = MaterialTheme.typography.titleLarge)
+                        // Sempre en una sola línia: la mida de la lletra s'ajusta a l'espai
+                        BasicText(
+                            "$nm de ${milers(geo.municipis.size)} municipis",
+                            style = MaterialTheme.typography.titleLarge.copy(color = cs.onPrimary),
+                            maxLines = 1,
+                            softWrap = false,
+                            autoSize = TextAutoSize.StepBased(minFontSize = 12.sp, maxFontSize = 22.sp),
+                        )
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Xip("${progres.comarquesVisitades.size} comarques", cs.onPrimary.copy(alpha = 0.16f), cs.onPrimary)
                             Xip("${progres.vegueriesVisitades.size} vegueries", cs.onPrimary.copy(alpha = 0.16f), cs.onPrimary)
@@ -116,6 +128,7 @@ fun PantallaProgres(
                                 .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
+                            if (EscutTerritori(t.id, 40.dp)) Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 FilaProgres(
                                     t.nom,
