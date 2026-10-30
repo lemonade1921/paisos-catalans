@@ -248,27 +248,38 @@ def limits_administratius(extractes: list[str], cache: str) -> list[tuple[dict, 
             raise RuntimeError(f"osmium tags-filter ({extracte}): {r.stderr.strip()[-400:]}")
         # Alguns límits que travessen la vora de l'extracte no es poden construir:
         # osmium ho avisa però continua; per això no exigim codi de sortida 0.
-        subprocess.run(["osmium", "export", "--overwrite", "-f", "geojsonseq",
-                        "--geometry-types=polygon", "--add-unique-id=type_id",
-                        "-o", sortida, filtrat], check=False)
+        r = subprocess.run(["osmium", "export", "--overwrite", "-f", "geojsonseq",
+                            "--geometry-types=polygon", "--add-unique-id=type_id",
+                            "-o", sortida, filtrat], capture_output=True, text=True)
+        if r.returncode != 0:
+            avis(f"osmium export ({extracte}) codi {r.returncode}: {r.stderr.strip()[-300:]}")
         if os.path.exists(sortida):
             break
     if not sortida or not os.path.exists(sortida):
         raise RuntimeError(f"No s'han pogut obtenir els límits de {extractes}")
     extracte = os.path.basename(sortida)
     out = []
+    linies = 0
+    mostra = None
+    nivells: dict[str, int] = {}
     with open(sortida, encoding="utf-8") as f:
         for linia in f:
-            linia = linia.strip().lstrip("\x1e")
+            linia = linia.strip().strip("\x1e").strip()
             if not linia:
                 continue
-            feat = json.loads(linia)
-            fid = str(feat.get("id", ""))
-            if not fid.startswith("r"):
-                continue  # només relacions
-            props = feat.get("properties") or {}
-            if props.get("boundary") != "administrative":
+            linies += 1
+            try:
+                feat = json.loads(linia)
+            except json.JSONDecodeError:
                 continue
+            fid = str(feat.get("id", ""))
+            props = feat.get("properties") or {}
+            if mostra is None:
+                mostra = (fid, sorted(props)[:12])
+            if fid[:1] in ("n", "w"):
+                continue  # vies tancades i nodes: només volem relacions
+            nivell = str(props.get("admin_level", ""))
+            nivells[nivell] = nivells.get(nivell, 0) + 1
             try:
                 g = shape(feat["geometry"])
                 if not g.is_valid:
@@ -277,9 +288,10 @@ def limits_administratius(extractes: list[str], cache: str) -> list[tuple[dict, 
                 continue
             if g.is_empty:
                 continue
-            props["@id"] = fid
+            props["@id"] = fid.lstrip("ar") or str(len(out))
             out.append((props, g))
-    log(f"  {extracte}: {len(out)} límits administratius")
+    avis(f"{os.path.basename(sortida)}: {linies} línies, {len(out)} relacions; "
+         f"nivells {dict(sorted(nivells.items()))}; mostra {mostra}")
     return out
 
 
@@ -402,7 +414,7 @@ def descarrega_territori(t: dict, cache: str):
         elif clau_codi:
             continue  # sense codi ni límit: no podem saber si és del territori
         municipis.append({
-            "osm": tags["@id"][1:], "nom": nom_de(tags), "cand": noms_candidats(tags),
+            "osm": tags["@id"], "nom": nom_de(tags), "cand": noms_candidats(tags),
             "geom": g, "lat": rp.y, "lon": rp.x, "comarca": None,
         })
     t["_lim_geom"] = lim_geom
