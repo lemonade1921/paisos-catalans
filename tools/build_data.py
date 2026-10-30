@@ -203,6 +203,14 @@ COMARQUES_VIQUIPEDIA = {
     ],
 }
 
+# Municipis que la Viquipèdia no permet assignar automàticament (nom català -> comarca)
+COMARCA_MANUAL = {
+    "CN": {
+        "Castellnou": "Rosselló", "Corbera de les Cabanes": "Rosselló", "la Torre del Bisbe": "Rosselló",
+        "Sançà": "Conflent", "els Banys d'Arles i Palaldà": "Vallespir", "Montalban lo Castèl": "Fenolleda",
+    },
+}
+
 # Illes Balears: cada illa fa de "comarca" (lon_min, lat_min, lon_max, lat_max)
 ILLES = [
     ("Mallorca", (2.20, 39.05, 3.55, 40.00)),
@@ -539,14 +547,23 @@ def descarrega_territori(t: dict, cache: str):
         for comarca, nom_ca, nom_es in t["llista"]:
             for n in (nom_ca, nom_es):
                 index[norm(n)] = (comarca, nom_ca)
-        resta = []
-        trobats = set()
+        per_entrada: dict[str, list] = {}
         for m in municipis:
             hit = next((index[c] for c in m["cand"] if c in index), None)
             if hit:
-                m["comarca"], m["nom"] = hit
-                trobats.add(norm(hit[1]))
-                resta.append(m)
+                per_entrada.setdefault(norm(hit[1]), []).append((hit, m))
+        resta = []
+        trobats = set()
+        for clau, cands in per_entrada.items():
+            # Si un nom coincideix amb diversos municipis, preferim el que el porta com a name:ca
+            cands.sort(key=lambda hm: (norm(hm[0][1]) not in {norm(hm[1]["nom"])}, -hm[1]["geom"].area))
+            (comarca, nom_ca), m = cands[0]
+            if len(cands) > 1:
+                resum(f"[{t['id']}] {nom_ca}: {len(cands)} coincidències, triat {m['nom']}; descartats "
+                      + ", ".join(x[1]["nom"] for x in cands[1:]))
+            m["comarca"], m["nom"] = comarca, nom_ca
+            trobats.add(clau)
+            resta.append(m)
         no_trobats = sorted(nom_ca for _, nom_ca, _ in t["llista"] if norm(nom_ca) not in trobats)
         resum(f"[{t['id']}] {len(resta)} de {len(t['llista'])} municipis de la llista"
              + (f"; no trobats: {', '.join(no_trobats)}" if no_trobats else ""))
@@ -712,6 +729,10 @@ def main():
         elif mode == "unica":
             for m in municipis:
                 m["comarca"] = t["nom"]
+        for nom_m, com in COMARCA_MANUAL.get(t["id"], {}).items():
+            for m in municipis:
+                if norm(nom_m) in m["cand"] or norm(nom_m) == norm(m["nom"]):
+                    m["comarca"] = com
         omple_buits(municipis, t["nom"])
 
         if t.get("exclou_comarques"):
