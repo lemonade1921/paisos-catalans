@@ -156,7 +156,7 @@ def norm(s: str) -> str:
         if s.startswith(a):
             s = s[len(a):]
             break
-    if "val d'aran" in s or s == "era val d'aran":
+    if re.search(r"\baran$", s):
         s = "aran"
     return re.sub(r"[^a-z0-9]+", " ", s).strip()
 
@@ -415,9 +415,22 @@ def descarrega_territori(t: dict, cache: str):
             continue  # sense codi ni límit: no podem saber si és del territori
         municipis.append({
             "osm": tags["@id"], "nom": nom_de(tags), "cand": noms_candidats(tags),
-            "geom": g, "lat": rp.y, "lon": rp.x, "comarca": None,
+            "geom": g, "lat": rp.y, "lon": rp.x, "comarca": None, "codi": codi,
         })
     t["_lim_geom"] = lim_geom
+    # Un sol municipi per codi oficial (fora duplicats i entitats menors amb el mateix prefix)
+    if clau_codi:
+        per_codi: dict[str, dict] = {}
+        sense = []
+        for m in municipis:
+            k = m.pop("codi", "")[:5]
+            if not k:
+                sense.append(m)
+            elif k not in per_codi or m["geom"].area > per_codi[k]["geom"].area:
+                per_codi[k] = m
+        if len(per_codi) + len(sense) != len(municipis):
+            avis(f"[{t['id']}] {len(municipis) - len(per_codi) - len(sense)} duplicats eliminats per codi")
+        municipis = list(per_codi.values()) + sense
     avis(f"[{t['id']}] {len(municipis)} municipis")
     return municipis
 
@@ -442,22 +455,59 @@ def comarques_osm(t: dict, municipis: list, cache: str) -> int:
     return assignats
 
 
+def wiki_enllacos(titol: str, cache_dir: str | None) -> list[str]:
+    """Articles enllaçats des d'una plantilla de navegació de la Viquipèdia."""
+    key = "wikitpl_" + slug(titol)
+    p = os.path.join(cache_dir, key + ".json") if cache_dir else None
+    if p and os.path.exists(p):
+        with open(p, encoding="utf-8") as f:
+            return json.load(f)
+    noms: list[str] = []
+    cont = None
+    while True:
+        params = {
+            "action": "query", "prop": "links", "format": "json", "titles": titol,
+            "plnamespace": "0", "pllimit": "500", "redirects": "1",
+        }
+        if cont:
+            params["plcontinue"] = cont
+        url = "https://ca.wikipedia.org/w/api.php?" + urllib.parse.urlencode(params)
+        try:
+            data = json.loads(http_get(url, timeout=60))
+        except Exception as e:  # noqa: BLE001
+            avis(f"Viquipèdia: error amb {titol}: {e}")
+            break
+        for pag in data.get("query", {}).get("pages", {}).values():
+            noms += [l["title"] for l in pag.get("links", [])]
+        cont = data.get("continue", {}).get("plcontinue")
+        if not cont:
+            break
+    if p:
+        with open(p, "w", encoding="utf-8") as f:
+            json.dump(noms, f)
+    return noms
+
+
 def comarques_viquipedia(t: dict, municipis: list, cache: str | None) -> int:
     index = {}
     for m in municipis:
         for c in m["cand"]:
             index.setdefault(c, []).append(m)
     assignats = 0
+    resum = []
     for com in COMARQUES_VIQUIPEDIA[t["id"]]:
-        noms = wiki_categoria(nom_categoria(com), cache)
+        base = nom_categoria(com)  # "Municipis del Rosselló"
+        titols = set(wiki_categoria(base, cache))
+        titols |= set(wiki_enllacos("Plantilla:" + base, cache))
         trobats = 0
-        for titol in noms:
+        for titol in titols:
             for m in index.get(norm(titol), []):
                 if m["comarca"] is None:
                     m["comarca"] = sense_article(com)
                     assignats += 1
                     trobats += 1
-        log(f"    {com}: {trobats}/{len(noms)}")
+        resum.append(f"{sense_article(com)} {trobats}")
+    avis(f"[{t['id']}] comarques via Viquipèdia: " + ", ".join(resum))
     return assignats
 
 
