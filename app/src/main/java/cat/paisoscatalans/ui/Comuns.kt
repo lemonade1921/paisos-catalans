@@ -1,6 +1,9 @@
 package cat.paisoscatalans.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -176,8 +179,7 @@ fun SelectorArticle(
             supportingText = { Text("«El mapa ${cat.paisoscatalans.data.Article.genitiu(mostra, ajustat)}»") },
             trailingIcon = {
                 androidx.compose.material3.Icon(
-                    if (obert) androidx.compose.material.icons.Icons.Filled.ArrowDropUp
-                    else androidx.compose.material.icons.Icons.Filled.ArrowDropDown,
+                    if (obert) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
                     contentDescription = null,
                 )
             },
