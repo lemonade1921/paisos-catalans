@@ -233,6 +233,15 @@ def log(*a):
     print(*a, file=sys.stderr, flush=True)
 
 
+RESUM: list[str] = []
+
+
+def resum(msg: str):
+    """Línia del resum final (una sola anotació de tipus notice a GitHub Actions)."""
+    log(msg)
+    RESUM.append(msg)
+
+
 def avis(msg: str):
     """Avís visible com a anotació a GitHub Actions."""
     log(msg)
@@ -382,7 +391,7 @@ def limits_administratius(extractes: list[str], cache: str) -> list[tuple[dict, 
                 continue
             props["@id"] = fid.lstrip("ar") or str(len(out))
             out.append((props, g))
-    avis(f"{os.path.basename(sortida)}: {linies} línies, {len(out)} relacions; "
+    log(f"{os.path.basename(sortida)}: {linies} línies, {len(out)} relacions; "
          f"nivells {dict(sorted(nivells.items()))}; mostra {mostra}")
     return out
 
@@ -521,7 +530,7 @@ def descarrega_territori(t: dict, cache: str):
             else:
                 resta.append(m)
         no_trobats = sorted(exclou - trobats)
-        avis(f"[{t['id']}] exclosos {len(municipis) - len(resta)} municipis de predomini castellà"
+        resum(f"[{t['id']}] exclosos {len(municipis) - len(resta)} municipis de predomini castellà"
              + (f"; no trobats: {', '.join(no_trobats)}" if no_trobats else ""))
         municipis = resta
 
@@ -539,7 +548,7 @@ def descarrega_territori(t: dict, cache: str):
                 trobats.add(norm(hit[1]))
                 resta.append(m)
         no_trobats = sorted(nom_ca for _, nom_ca, _ in t["llista"] if norm(nom_ca) not in trobats)
-        avis(f"[{t['id']}] {len(resta)} de {len(t['llista'])} municipis de la llista"
+        resum(f"[{t['id']}] {len(resta)} de {len(t['llista'])} municipis de la llista"
              + (f"; no trobats: {', '.join(no_trobats)}" if no_trobats else ""))
         municipis = resta
     # Un sol municipi per codi oficial (fora duplicats i entitats menors amb el mateix prefix)
@@ -560,7 +569,7 @@ def descarrega_territori(t: dict, cache: str):
         for m in municipis:
             llargs[len(m.get("codi", ""))] = llargs.get(len(m.get("codi", "")), 0) + 1
         estranys = sorted(f"{m['nom']}({m.get('codi', '')})" for m in municipis if len(m.get("codi", "")) != 5)
-        avis(f"[{t['id']}] llargada dels codis {llargs}; codis no estàndard: {', '.join(estranys[:30])}")
+        log(f"[{t['id']}] llargada dels codis {llargs}; codis no estàndard: {', '.join(estranys[:30])}")
     avis(f"[{t['id']}] {len(municipis)} municipis")
     return municipis
 
@@ -653,7 +662,7 @@ def omple_buits(municipis: list, per_defecte: str):
         else:
             m["comarca"] = per_defecte
     if buits:
-        avis(f"{len(buits)} municipis assignats a comarca per proximitat: "
+        resum(f"{len(buits)} municipis assignats a comarca per proximitat: "
              + ", ".join(sorted(m["nom"] for m in buits)[:40]))
 
 
@@ -709,8 +718,8 @@ def main():
             fora = {norm(c) for c in t["exclou_comarques"]}
             abans = len(municipis)
             municipis = [m for m in municipis if norm(m["comarca"]) not in fora]
-            avis(f"[{t['id']}] exclosos {abans - len(municipis)} municipis de: {', '.join(t['exclou_comarques'])}")
-        avis(f"[{t['id']}] total final: {len(municipis)} municipis")
+            resum(f"[{t['id']}] exclosos {abans - len(municipis)} municipis de: {', '.join(t['exclou_comarques'])}")
+        resum(f"[{t['id']}] total final: {len(municipis)} municipis")
 
         per_comarca: dict[str, list] = {}
         for m in municipis:
@@ -750,6 +759,11 @@ def main():
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w", encoding="utf-8") as f:
         json.dump(sortida, f, ensure_ascii=False, separators=(",", ":"))
+    resum(f"TOTAL {len(sortida['municipis'])} municipis, {len(sortida['comarques'])} comarques, "
+          f"{len(sortida['vegueries'])} vegueries")
+    if os.environ.get("GITHUB_ACTIONS"):
+        text = " %0A".join(m.replace("%", "%25") for m in RESUM)
+        print(f"::notice title=Resum de dades::{text}", flush=True)
     log(f"Escrit {args.out}: {len(sortida['municipis'])} municipis, "
         f"{len(sortida['comarques'])} comarques, {len(sortida['vegueries'])} vegueries, "
         f"{os.path.getsize(args.out) // 1024} KB")
