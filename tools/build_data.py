@@ -405,14 +405,13 @@ def descarrega_territori(t: dict, cache: str):
             continue
         rp = g.representative_point()
         codi = tags.get(clau_codi, "") if clau_codi else ""
-        if codi:
+        if clau_codi:
+            # Els municipis oficials sempre porten codi (INE / INSEE); la resta són
+            # altres entitats amb admin_level=8 que no compten.
             if not codi.startswith(prefixos):
-                continue  # municipi d'una altra província/departament
-        elif lim_geom is not None:
-            if not lim_geom.contains(rp):
-                continue  # municipi veí, fora del territori
-        elif clau_codi:
-            continue  # sense codi ni límit: no podem saber si és del territori
+                continue
+        elif lim_geom is not None and not lim_geom.contains(rp):
+            continue  # municipi veí, fora del territori
         municipis.append({
             "osm": tags["@id"], "nom": nom_de(tags), "cand": noms_candidats(tags),
             "geom": g, "lat": rp.y, "lon": rp.x, "comarca": None, "codi": codi,
