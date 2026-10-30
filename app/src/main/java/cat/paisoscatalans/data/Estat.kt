@@ -30,6 +30,13 @@ data class Estat(
     val introduit: Boolean = false,
     /** Aparença: "sistema", "clar", "fosc" o "oled" */
     val tema: String = "sistema",
+    /** Confeti quan s'aconsegueix una insígnia */
+    val confeti: Boolean = true,
+    /** Recordatori diari del joc i hora (minuts des de mitjanit) */
+    val recordatori: Boolean = false,
+    val horaRecordatori: Int = 19 * 60,
+    /** Insígnies ja celebrades; null = encara no inicialitzat (no es celebra res de cop) */
+    val insigniesVistes: Set<String>? = null,
     val teFoto: Boolean = false,
     val fotoVersio: Long = 0,
     /** id de municipi -> dia (epochDay) en què es va marcar com a visitat */
@@ -151,6 +158,10 @@ class Magatzem(private val context: Context) {
             // Un fitxer d'estat d'una versió anterior vol dir que l'app ja s'ha fet servir
             introduit = o.optBoolean("introduit", true),
             tema = o.optString("tema", "sistema"),
+            confeti = o.optBoolean("confeti", true),
+            recordatori = o.optBoolean("recordatori", false),
+            horaRecordatori = o.optInt("horaRecordatori", 19 * 60),
+            insigniesVistes = o.optJSONArray("insigniesVistes")?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() },
             fotoVersio = o.optLong("fotoVersio"),
             visitats = vis,
             partides = parts,
@@ -163,6 +174,10 @@ class Magatzem(private val context: Context) {
         put("article", e.article)
         put("introduit", e.introduit)
         put("tema", e.tema)
+        put("confeti", e.confeti)
+        put("recordatori", e.recordatori)
+        put("horaRecordatori", e.horaRecordatori)
+        e.insigniesVistes?.let { put("insigniesVistes", JSONArray(it.toList())) }
         put("fotoVersio", e.fotoVersio)
         put("visitats", JSONObject().apply { e.visitats.forEach { (k, v) -> put(k, v) } })
         put("partides", JSONObject().apply {

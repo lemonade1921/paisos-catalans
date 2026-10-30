@@ -2,6 +2,12 @@ package cat.paisoscatalans.ui.perfil
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.exponentialDecay
+import androidx.compose.foundation.Canvas
+import androidx.compose.material3.Button
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.rotate
+import kotlin.random.Random
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -54,39 +60,126 @@ import cat.paisoscatalans.data.Insignia
 import kotlinx.coroutines.launch
 import kotlin.math.sin
 
-/** Diàleg amb la medalla en 3D: gira sola i es pot fer girar arrossegant-la. */
+/**
+ * Diàleg amb la medalla en 3D: gira sola i es pot fer girar arrossegant-la.
+ * Si [nova] és cert, és la celebració d'una insígnia acabada d'aconseguir; amb [confeti]
+ * hi plou confeti que s'esvaeix. El botó Tanca ho fa desaparèixer tot.
+ */
 @Composable
-fun DialegInsignia(i: Insignia, forma: Shape, icona: ImageVector, categoria: String, onTanca: () -> Unit) {
+fun DialegInsignia(
+    i: Insignia,
+    forma: Shape,
+    icona: ImageVector,
+    categoria: String,
+    nova: Boolean = false,
+    confeti: Boolean = false,
+    onTanca: () -> Unit,
+) {
     val cs = MaterialTheme.colorScheme
-    Dialog(onDismissRequest = onTanca, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(
-            color = cs.surfaceContainerHigh,
-            shape = RoundedCornerShape(36.dp),
-            modifier = Modifier.padding(24.dp).fillMaxWidth(),
-        ) {
-            Column(
-                Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+    Dialog(
+        onDismissRequest = onTanca,
+        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = !nova),
+    ) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            if (nova && confeti) Confeti(Modifier.fillMaxSize())
+            Surface(
+                color = cs.surfaceContainerHigh,
+                shape = RoundedCornerShape(36.dp),
+                modifier = Modifier.padding(24.dp).fillMaxWidth(),
             ) {
-                Text(categoria.uppercase(), style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant)
-                Medalla3D(i, forma, icona, Modifier.size(240.dp).padding(vertical = 8.dp))
-                Text(i.titol, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
-                Text(i.descripcio, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant,
-                    textAlign = TextAlign.Center)
-                if (i.aconseguida) {
-                    Text("Aconseguida", style = MaterialTheme.typography.titleMedium, color = cs.tertiary,
-                        fontWeight = FontWeight.Bold)
-                } else {
-                    LinearWavyProgressIndicator(
-                        progress = { (i.progres.toFloat() / i.objectiu).coerceIn(0f, 1f) },
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                    )
-                    Text("${minOf(i.progres, i.objectiu)} de ${i.objectiu}", style = MaterialTheme.typography.titleMedium)
+                Column(
+                    Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    if (nova) {
+                        Text("Nova insígnia!", style = MaterialTheme.typography.headlineMedium, color = cs.primary,
+                            fontWeight = FontWeight.Black)
+                    }
+                    Text(categoria.uppercase(), style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant)
+                    Medalla3D(i, forma, icona, Modifier.size(240.dp).padding(vertical = 8.dp))
+                    Text(i.titol, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+                    Text(i.descripcio, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant,
+                        textAlign = TextAlign.Center)
+                    if (i.aconseguida) {
+                        Text("Aconseguida", style = MaterialTheme.typography.titleMedium, color = cs.tertiary,
+                            fontWeight = FontWeight.Bold)
+                    } else {
+                        LinearWavyProgressIndicator(
+                            progress = { (i.progres.toFloat() / i.objectiu).coerceIn(0f, 1f) },
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        )
+                        Text("${minOf(i.progres, i.objectiu)} de ${i.objectiu}", style = MaterialTheme.typography.titleMedium)
+                    }
+                    Text("Arrossega la medalla per fer-la girar", style = MaterialTheme.typography.bodySmall,
+                        color = cs.onSurfaceVariant)
+                    if (nova) {
+                        Button(onClick = onTanca) { Text("Tanca") }
+                    } else {
+                        TextButton(onClick = onTanca) { Text("Tanca") }
+                    }
                 }
-                Text("Arrossega la medalla per fer-la girar", style = MaterialTheme.typography.bodySmall,
-                    color = cs.onSurfaceVariant)
-                TextButton(onClick = onTanca) { Text("Tanca") }
+            }
+        }
+    }
+}
+
+private class Particula(
+    val x0: Float, val y0: Float, val vx: Float, val vy: Float,
+    val gir0: Float, val vGir: Float, val ample: Float, val alt: Float, val color: Color, val rodona: Boolean,
+    val oscil: Float,
+)
+
+/** Confeti que cau des de dalt i s'esvaeix al cap d'uns segons. */
+@Composable
+fun Confeti(modifier: Modifier = Modifier) {
+    val cs = MaterialTheme.colorScheme
+    val colors = listOf(
+        cs.primary, cs.tertiary, cs.secondary, Color(0xFFF1E48A), Color(0xFFE07A50),
+        Color(0xFF6EC6FF), Color(0xFF9CCC65), Color(0xFFFF8FB1), Color(0xFFDA121A), Color(0xFFFCDD09),
+    )
+    val particules = remember {
+        val r = Random(System.nanoTime())
+        List(160) {
+            Particula(
+                x0 = r.nextFloat(), y0 = -0.05f - r.nextFloat() * 0.35f,
+                vx = (r.nextFloat() - 0.5f) * 0.12f, vy = 0.10f + r.nextFloat() * 0.18f,
+                gir0 = r.nextFloat() * 360f, vGir = (r.nextFloat() - 0.5f) * 720f,
+                ample = 6f + r.nextFloat() * 8f, alt = 10f + r.nextFloat() * 10f,
+                color = colors[r.nextInt(colors.size)], rodona = r.nextInt(5) == 0,
+                oscil = r.nextFloat() * 6.28f,
+            )
+        }
+    }
+    val durada = 4.5f
+    var t by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        val inici = withFrameNanos { it }
+        while (t < durada) {
+            t = (withFrameNanos { it } - inici) / 1_000_000_000f
+        }
+    }
+    if (t >= durada) return
+    val densitat = LocalDensity.current.density
+    Canvas(modifier) {
+        val alfa = if (t > 3f) (1f - (t - 3f) / (durada - 3f)).coerceIn(0f, 1f) else 1f
+        val w = size.width
+        val h = size.height
+        for (p in particules) {
+            val x = (p.x0 + p.vx * t) * w + sin(p.oscil + t * 3f) * 14f * densitat
+            val y = (p.y0 + p.vy * t + 0.16f * t * t) * h
+            if (y < -40f || y > h + 40f) continue
+            val c = p.color.copy(alpha = alfa)
+            if (p.rodona) {
+                drawCircle(c, radius = p.ample * densitat / 2f, center = Offset(x, y))
+            } else {
+                rotate(p.gir0 + p.vGir * t, pivot = Offset(x, y)) {
+                    drawRect(
+                        c,
+                        topLeft = Offset(x - p.ample * densitat / 2f, y - p.alt * densitat / 2f),
+                        size = Size(p.ample * densitat, p.alt * densitat),
+                    )
+                }
             }
         }
     }

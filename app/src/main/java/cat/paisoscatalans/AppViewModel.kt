@@ -13,6 +13,7 @@ import cat.paisoscatalans.data.Geo
 import cat.paisoscatalans.data.JocDiari
 import cat.paisoscatalans.data.Magatzem
 import cat.paisoscatalans.data.Partida
+import cat.paisoscatalans.recordatori.Recordatori
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,6 +39,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     init {
         viewModelScope.launch {
             magatzem.carrega()
+            magatzem.estat.value.let { e ->
+                if (e.recordatori) Recordatori.programa(getApplication(), e.horaRecordatori)
+            }
             val g = withContext(Dispatchers.Default) { Geo.carrega(getApplication()) }
             _geo.value = if (g == null) Carrega.SenseDades else Carrega.Llesta(g)
         }
@@ -91,6 +95,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         magatzem.restaura(text)
     } catch (e: Exception) {
         "No s'ha pogut llegir la còpia: ${e.localizedMessage}"
+    }
+
+    fun canviaConfeti(on: Boolean) = viewModelScope.launch {
+        magatzem.actualitza { it.copy(confeti = on) }
+    }
+
+    /** Activa o desactiva el recordatori diari i el (re)programa. */
+    fun canviaRecordatori(on: Boolean, minuts: Int) = viewModelScope.launch {
+        magatzem.actualitza { it.copy(recordatori = on, horaRecordatori = minuts) }
+        val ctx = getApplication<Application>()
+        if (on) Recordatori.programa(ctx, minuts) else Recordatori.cancella(ctx)
+    }
+
+    fun marcaInsigniesVistes(ids: Set<String>) = viewModelScope.launch {
+        magatzem.actualitza { it.copy(insigniesVistes = (it.insigniesVistes ?: emptySet()) + ids) }
     }
 
     fun canviaTema(tema: String) = viewModelScope.launch {

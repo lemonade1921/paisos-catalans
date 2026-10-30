@@ -44,6 +44,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import cat.paisoscatalans.AppViewModel
 import cat.paisoscatalans.Carrega
 import cat.paisoscatalans.data.Geo
+import cat.paisoscatalans.data.Insignia
+import cat.paisoscatalans.data.Insignies
+import cat.paisoscatalans.data.Ratxa
+import cat.paisoscatalans.ui.perfil.DialegInsignia
+import cat.paisoscatalans.ui.perfil.formaDe
+import cat.paisoscatalans.ui.perfil.iconaDe
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
 import cat.paisoscatalans.data.JocDiari
 import cat.paisoscatalans.data.Progres
 import cat.paisoscatalans.ui.ajustos.PantallaAjustos
@@ -66,17 +74,17 @@ private enum class Pestanya(val etiqueta: String, val actiu: ImageVector, val in
 }
 
 @Composable
-fun App(vm: AppViewModel = viewModel()) {
+fun App(vm: AppViewModel = viewModel(), obre: String? = null, onObert: () -> Unit = {}) {
     val estat by vm.estat.collectAsStateWithLifecycle()
     TemaPaisos(ModeTema.de(estat.tema)) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            Contingut(vm)
+            Contingut(vm, obre, onObert)
         }
     }
 }
 
 @Composable
-private fun Contingut(vm: AppViewModel) {
+private fun Contingut(vm: AppViewModel, obre: String?, onObert: () -> Unit) {
     val carrega by vm.geo.collectAsStateWithLifecycle()
     when (val c = carrega) {
         Carrega.EnCurs -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LoadingIndicator() }
@@ -95,14 +103,14 @@ private fun Contingut(vm: AppViewModel) {
                     onRestaura = { vm.importaCopia(it) },
                 )
             } else {
-                AppAmbDades(vm, c.geo)
+                AppAmbDades(vm, c.geo, obre, onObert)
             }
         }
     }
 }
 
 @Composable
-private fun AppAmbDades(vm: AppViewModel, geo: Geo) {
+private fun AppAmbDades(vm: AppViewModel, geo: Geo, obre: String?, onObert: () -> Unit) {
     val estat by vm.estat.collectAsStateWithLifecycle()
     val model = remember(geo) { ModelMapa(geo) }
     val progres = remember(geo, estat) { Progres(geo, estat) }
@@ -119,6 +127,32 @@ private fun AppAmbDades(vm: AppViewModel, geo: Geo) {
     BackHandler(enabled = !ajustos && comarca == null && pestanya != Pestanya.MAPA) { pestanya = Pestanya.MAPA }
 
     val jocPendent = estat.partides[JocDiari.avui()]?.acabada != true
+
+    // Obrir el joc des de la notificació del recordatori
+    LaunchedEffect(obre) {
+        if (obre == "joc") {
+            pestanya = Pestanya.JOC; comarca = null; ajustos = false; mapaComplet = false
+            onObert()
+        }
+    }
+
+    // Insígnies noves: confeti + medalla 3D, una per una
+    val ratxaMax = remember(estat.partides) { Ratxa.maxima(estat) }
+    val aconseguides = remember(geo, progres, ratxaMax) {
+        Insignies.calcula(geo, progres, ratxaMax).filter { it.aconseguida }
+    }
+    var celebrant by remember { mutableStateOf<Insignia?>(null) }
+    // Les tancades en aquesta sessió (el desat és asíncron: evita que tornin a sortir)
+    val celebrades = remember { mutableStateListOf<String>() }
+    LaunchedEffect(aconseguides, estat.insigniesVistes, celebrant) {
+        val vistes = estat.insigniesVistes
+        if (vistes == null) {
+            // Primer cop (o després de restaurar una còpia antiga): no celebrem el que ja hi havia
+            vm.marcaInsigniesVistes(aconseguides.map { it.id }.toSet())
+        } else if (celebrant == null) {
+            celebrant = aconseguides.firstOrNull { it.id !in vistes && it.id !in celebrades }
+        }
+    }
 
     Scaffold(
         bottomBar = {
@@ -162,6 +196,11 @@ private fun AppAmbDades(vm: AppViewModel, geo: Geo) {
                         tema = ModeTema.de(estat.tema),
                         sistemaFosc = sistemaFosc,
                         onTema = { vm.canviaTema(it.clau) },
+                        confeti = estat.confeti,
+                        onConfeti = { vm.canviaConfeti(it) },
+                        recordatori = estat.recordatori,
+                        horaRecordatori = estat.horaRecordatori,
+                        onRecordatori = { on, minuts -> vm.canviaRecordatori(on, minuts) },
                         onEsborraTot = { vm.esborraTot() },
                         onExporta = { vm.exportaCopia(it) },
                         onImporta = { vm.importaCopia(it) },
@@ -207,5 +246,17 @@ private fun AppAmbDades(vm: AppViewModel, geo: Geo) {
 
     if (compartint) {
         FullCompartir(geo, model, progres, estat.nom, estat.article, onTanca = { compartint = false })
+    }
+
+    celebrant?.let { ins ->
+        DialegInsignia(
+            ins, formaDe(ins.categoria), iconaDe(ins.categoria), ins.categoria.titol,
+            nova = true,
+            confeti = estat.confeti,
+        ) {
+            celebrades.add(ins.id)
+            vm.marcaInsigniesVistes(setOf(ins.id))
+            celebrant = null
+        }
     }
 }

@@ -196,12 +196,6 @@ TERRITORIS = [
         "exclou_municipis": PV_CASTELLANOPARLANTS,
     },
     {
-        "id": "CX",
-        "nom": "el Carxe",
-        "extractes": ["europe/spain/murcia"],
-        "comarques": "carxe",
-    },
-    {
         "id": "IB",
         "nom": "Illes Balears",
         "extractes": ["europe/spain/islas-baleares"],

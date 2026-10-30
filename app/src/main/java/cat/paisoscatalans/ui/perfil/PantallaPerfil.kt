@@ -191,7 +191,7 @@ fun PantallaPerfil(
                 Avatar(foto, estat.nom, 64.dp, onClick = onAjustos)
                 Column(Modifier.weight(1f).padding(start = 14.dp)) {
                     Text(
-                        if (estat.nom.isBlank()) "Perfil" else Article.nominatiu(estat.nom, estat.article),
+                        estat.nom.trim().ifBlank { "Perfil" },
                         style = MaterialTheme.typography.headlineMedium,
                         maxLines = 1,
                     )

@@ -2,7 +2,7 @@
 
 App per a Android per portar el compte dels **municipis**, **comarques** i **vegueries** que has visitat
 als territoris de parla catalana: el Principat de Catalunya (sense la Vall d'Aran), Andorra, Catalunya Nord (sense la
-Fenolleda), la Franja de Ponent, el País Valencià (municipis de predomini lingüístic valencià), el Carxe,
+Fenolleda), la Franja de Ponent, el País Valencià (municipis de predomini lingüístic valencià),
 les Illes Balears i l'Alguer.
 Inclou un joc diari per endevinar un municipi i insígnies per anar-ne guanyant.
 
@@ -18,11 +18,14 @@ Disseny: Material 3 Expressive (Jetpack Compose). Tota l'app és en català.
 - **Joc diari: el municipi del dia.** Sis intents; cada resposta mostra la distància, la direcció i la proximitat.
   Pistes de territori i comarca. Ratxa de dies seguits jugant.
 - **Perfil** amb les **insígnies**: municipis, comarques, vegueries, territoris i ratxes del joc.
-  Toca una insígnia per veure-la com una medalla en 3D que pots fer girar.
-- **Ajustos**: nom, foto i article personal; aparença Segueix el sistema / Clar / Fosc / OLED (negre pur) i **còpia de seguretat**:
+  Toca una insígnia per veure-la com una medalla en 3D que pots fer girar. Quan n'aconsegueixes una de nova,
+  apareix la medalla amb confeti (es pot desactivar).
+- **Ajustos**: nom, foto i article personal; recordatori diari del joc amb l'hora que triïs (notificació
+  local, sense Internet); confeti; aparença Segueix el sistema / Clar / Fosc / OLED (negre pur) i **còpia de seguretat**:
   desa i restaura en un fitxer JSON els llocs visitats, les partides (ratxes i insígnies), el perfil i els ajustos.
-- **Comparteix** una imatge (format història o publicació) o un text a Instagram Stories, Signal, Molly,
-  Mastodon i Bluesky, o desa la imatge a la galeria.
+- **Comparteix** una imatge (format història o publicació, amb 8 combinacions de colors) o un text a
+  Instagram Stories, Instagram Direct, WhatsApp, Missatges, Signal, Molly, Mastodon i Bluesky (amb la icona
+  real de cada app instal·lada), o desa la imatge a la galeria.
 
 ## Privadesa i funcionament sense connexió
 
@@ -50,10 +53,6 @@ Els límits provenen d'**OpenStreetMap** (© col·laboradors d'OpenStreetMap, ll
    - País Valencià: comarques d'OSM. Se n'exclouen els municipis de predomini lingüístic castellà
      (art. 36 de la Llei 4/1983 d'ús i ensenyament del valencià).
    - Andorra: les 7 parròquies fan de municipis.
-   - El Carxe (Múrcia): no té municipis propis. Es localitzen els seus nuclis a OSM (el Carxe, el Raspai,
-     la Torre del Rico, la Canyada del Trigo, la Sarsa, la Canyada de l'Alenya…); l'àrea cobreix aquests nuclis
-     i la franja fins al Pinós i l'Alguenya, dins dels termes de Iecla, Jumella i Favanella, i es divideix en una
-     zona per nucli, que fan de municipis.
    - Illes Balears: cada illa fa de comarca (Mallorca, Menorca, Eivissa, Formentera).
    - L'Alguer: un sol municipi.
    Els municipis que no es poden assignar prenen la comarca del municipi veí més proper (l'script ho avisa).
