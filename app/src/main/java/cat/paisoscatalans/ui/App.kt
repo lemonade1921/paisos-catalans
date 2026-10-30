@@ -47,6 +47,7 @@ import cat.paisoscatalans.data.Geo
 import cat.paisoscatalans.data.JocDiari
 import cat.paisoscatalans.data.Progres
 import cat.paisoscatalans.ui.ajustos.PantallaAjustos
+import cat.paisoscatalans.ui.benvinguda.PantallaBenvinguda
 import cat.paisoscatalans.ui.compartir.FullCompartir
 import cat.paisoscatalans.ui.joc.PantallaJoc
 import cat.paisoscatalans.ui.mapa.ModelMapa
@@ -86,7 +87,17 @@ private fun Contingut(vm: AppViewModel) {
                 textAlign = TextAlign.Center,
             )
         }
-        is Carrega.Llesta -> AppAmbDades(vm, c.geo)
+        is Carrega.Llesta -> {
+            val estat by vm.estat.collectAsStateWithLifecycle()
+            if (!estat.introduit) {
+                PantallaBenvinguda(
+                    onComencaDeZero = { nom, article -> vm.acabaBenvinguda(nom, article) },
+                    onRestaura = { vm.importaCopia(it) },
+                )
+            } else {
+                AppAmbDades(vm, c.geo)
+            }
+        }
     }
 }
 
@@ -99,6 +110,8 @@ private fun AppAmbDades(vm: AppViewModel, geo: Geo) {
     var comarca by rememberSaveable { mutableStateOf<String?>(null) }
     var compartint by rememberSaveable { mutableStateOf(false) }
     var ajustos by rememberSaveable { mutableStateOf(false) }
+    var mapaComplet by rememberSaveable { mutableStateOf(false) }
+    val ambBarra = !(mapaComplet && pestanya == Pestanya.MAPA && comarca == null && !ajustos)
     val sistemaFosc = isSystemInDarkTheme()
 
     BackHandler(enabled = ajustos) { ajustos = false }
@@ -109,7 +122,7 @@ private fun AppAmbDades(vm: AppViewModel, geo: Geo) {
 
     Scaffold(
         bottomBar = {
-            ShortNavigationBar {
+            if (ambBarra) ShortNavigationBar {
                 Pestanya.entries.forEach { p ->
                     ShortNavigationBarItem(
                         selected = pestanya == p,
@@ -144,6 +157,8 @@ private fun AppAmbDades(vm: AppViewModel, geo: Geo) {
                         sistemaFosc = sistemaFosc,
                         onTema = { vm.canviaTema(it.clau) },
                         onEsborraTot = { vm.esborraTot() },
+                        onExporta = { vm.exportaCopia(it) },
+                        onImporta = { vm.importaCopia(it) },
                         onEnrere = { ajustos = false },
                     )
                 } else if (com != null) {
@@ -158,7 +173,9 @@ private fun AppAmbDades(vm: AppViewModel, geo: Geo) {
                         geo, model, estat, progres,
                         onCommuta = { vm.commutaVisitat(it) },
                         onComparteix = { compartint = true },
-                        onObreComarca = { comarca = it },
+                        onObreComarca = { comarca = it; mapaComplet = false },
+                        pantallaCompleta = mapaComplet,
+                        onPantallaCompleta = { mapaComplet = it },
                     )
                     Pestanya.PROGRES -> PantallaProgres(
                         geo, progres,
@@ -177,6 +194,7 @@ private fun AppAmbDades(vm: AppViewModel, geo: Geo) {
                         onFoto = { vm.desaFoto(it) },
                         onTreuFoto = { vm.treuFoto() },
                         onNom = { vm.canviaNom(it) },
+                        onArticle = { vm.canviaArticle(it) },
                         onComparteix = { compartint = true },
                         onAjustos = { ajustos = true },
                     )
@@ -186,6 +204,6 @@ private fun AppAmbDades(vm: AppViewModel, geo: Geo) {
     }
 
     if (compartint) {
-        FullCompartir(geo, model, progres, estat.nom, onTanca = { compartint = false })
+        FullCompartir(geo, model, progres, estat.nom, estat.article, onTanca = { compartint = false })
     }
 }

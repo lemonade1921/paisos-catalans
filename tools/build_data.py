@@ -119,10 +119,15 @@ FRANJA = [
     ("Ribagorça", "Viacamp", "Viacamp y Litera"),
 ]
 
-# El Carxe (Múrcia): zona catalanoparlant dins dels termes de Jumilla, Iecla i Favanella,
-# sense municipi propi. Polígon aproximat (lon, lat).
-CARXE = [(-1.235, 38.43), (-1.19, 38.39), (-1.11, 38.385), (-1.05, 38.425), (-1.035, 38.50),
-         (-1.09, 38.535), (-1.17, 38.525), (-1.23, 38.48)]
+# El Carxe (Múrcia): zona catalanoparlant sense municipi propi. Comprèn una part dels termes de
+# Iecla, Jumella i Favanella i toca el Pinós i l'Alguenya. La calculem com la part d'aquests tres
+# municipis que queda a menys de CARXE_DIST graus (~10 km) del Pinós i de l'Alguenya.
+CARXE_MURCIA = ["Yecla", "Jumilla", "Abanilla"]
+CARXE_VEINS = ["el Pinós", "Pinoso", "l'Alguenya", "Algueña"]
+CARXE_DIST = 0.10
+# Polígon aproximat, només si no es pot calcular amb les dades d'OSM (lon, lat)
+CARXE_RESERVA = [(-1.16, 38.30), (-1.10, 38.27), (-1.04, 38.30), (-1.03, 38.36), (-1.04, 38.43),
+                 (-1.08, 38.48), (-1.14, 38.47), (-1.18, 38.40)]
 
 TERRITORIS = [
     {
@@ -134,6 +139,16 @@ TERRITORIS = [
         "comarques": "osm",
         # La Vall d'Aran és occitanoparlant
         "exclou_comarques": ["Aran"],
+    },
+    {
+        "id": "AD",
+        "nom": "Andorra",
+        "extractes": ["europe/andorra"],
+        "limit": None,
+        # Les 7 parròquies (admin_level=7 a OSM) fan de municipis; Andorra fa de comarca
+        "nivell": "7",
+        "codi": ("ISO3166-2", ("AD-",)),
+        "comarques": "unica",
     },
     {
         "id": "CN",
@@ -166,7 +181,8 @@ TERRITORIS = [
     {
         "id": "CX",
         "nom": "el Carxe",
-        "comarques": "manual",
+        "extractes": ["europe/spain/murcia"],
+        "comarques": "carxe",
     },
     {
         "id": "IB",
@@ -508,7 +524,7 @@ def descarrega_territori(t: dict, cache: str):
 
     municipis = []
     for tags, g in limits:
-        if tags.get("admin_level") != "8":
+        if tags.get("admin_level") != t.get("nivell", "8"):
             continue
         if t.get("municipi_nom") and t["municipi_nom"] not in (tags.get("name"), tags.get("name:it")):
             continue
@@ -683,6 +699,27 @@ def omple_buits(municipis: list, per_defecte: str):
              + ", ".join(sorted(m["nom"] for m in buits)[:40]))
 
 
+def calcula_carxe(t: dict, cache: str, valencians: list):
+    try:
+        limits = limits_administratius(t["extractes"], cache)
+        noms = {norm(n) for n in CARXE_MURCIA}
+        murcia = [g for tags, g in limits
+                  if tags.get("admin_level") == "8" and noms_candidats(tags) & noms]
+        veins_n = {norm(n) for n in CARXE_VEINS}
+        veins = [m["geom"] for m in valencians if m["cand"] & veins_n]
+        if len(murcia) < 3 or len(veins) < 2:
+            raise RuntimeError(f"trobats {len(murcia)} municipis murcians i {len(veins)} veïns")
+        g = unary_union(murcia).intersection(unary_union(veins).buffer(CARXE_DIST))
+        g = unary_union(poligons(g)).buffer(0)
+        if g.is_empty or g.area < 0.002:
+            raise RuntimeError("àrea buida")
+        resum(f"[CX] el Carxe calculat amb OSM ({g.area * 9000:.0f} km² aprox.)")
+        return g
+    except Exception as e:  # noqa: BLE001
+        resum(f"[CX] no s'ha pogut calcular el Carxe ({e}); faig servir el polígon de reserva")
+        return Polygon(CARXE_RESERVA)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cache", default=os.path.join(ROOT, ".cache-osm"),
@@ -701,16 +738,18 @@ def main():
         "territoris": [], "vegueries": [], "comarques": [], "municipis": [],
     }
     geoms_veg: dict[str, list] = {}
+    per_territori: dict[str, list] = {}
 
     for t in TERRITORIS:
         mode = t["comarques"]
-        if mode == "manual":
-            g = Polygon(CARXE)
+        if mode == "carxe":
+            g = calcula_carxe(t, args.cache, per_territori.get("PV", []))
             rp = g.representative_point()
             municipis = [{"osm": "carxe", "nom": "el Carxe", "cand": set(), "geom": g,
                           "lat": rp.y, "lon": rp.x, "comarca": "Carxe"}]
         else:
             municipis = descarrega_territori(t, args.cache)
+        per_territori[t["id"]] = municipis
         if mode == "osm":
             comarques_osm(t, municipis, args.cache)
         elif mode == "osm_o_viquipedia":

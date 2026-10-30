@@ -2,6 +2,7 @@ package cat.paisoscatalans.ui.mapa
 
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,6 +18,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
@@ -61,8 +64,12 @@ fun PantallaMapa(
     onCommuta: (String) -> Unit,
     onComparteix: () -> Unit,
     onObreComarca: (String) -> Unit,
+    pantallaCompleta: Boolean = false,
+    onPantallaCompleta: (Boolean) -> Unit = {},
 ) {
     val cs = MaterialTheme.colorScheme
+    val complet = pantallaCompleta
+    BackHandler(enabled = complet) { onPantallaCompleta(false) }
     var capa by rememberSaveable { mutableStateOf(Capa.MUNICIPIS) }
     var seleccionat by rememberSaveable { mutableStateOf<String?>(null) }
     var cerca by rememberSaveable { mutableStateOf("") }
@@ -85,7 +92,7 @@ fun PantallaMapa(
 
     Column(Modifier.fillMaxSize()) {
         // Barra de cerca + compartir
-        Row(
+        if (!complet) Row(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -118,8 +125,8 @@ fun PantallaMapa(
         Box(Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize()) {
                 // Comptador
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                if (!complet) Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
@@ -130,33 +137,76 @@ fun PantallaMapa(
                     }
                     Galeta(percent(num, total), 84.dp)
                 }
-                GrupOpcions(
-                    opcions = Capa.entries,
-                    seleccionada = capa,
-                    etiqueta = { it.etiqueta },
-                    onTria = { capa = it; seleccionat = null },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                )
                 Surface(
                     color = cs.surfaceContainer,
-                    shape = RoundedCornerShape(32.dp),
-                    modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 12.dp),
+                    shape = if (complet) RoundedCornerShape(0.dp) else RoundedCornerShape(32.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .then(if (complet) Modifier else Modifier.padding(horizontal = 16.dp).padding(bottom = 12.dp)),
                 ) {
-                    MapaVectorial(
-                        model = model,
-                        capa = capa,
-                        camera = camera,
-                        colorDe = colorDe,
-                        seleccionat = seleccionat,
-                        onToc = { seleccionat = it?.id; focus.clearFocus() },
-                        modifier = Modifier.fillMaxSize(),
-                    )
+                    Box(Modifier.fillMaxSize()) {
+                        MapaVectorial(
+                            model = model,
+                            capa = capa,
+                            camera = camera,
+                            colorDe = colorDe,
+                            seleccionat = seleccionat,
+                            onToc = { seleccionat = it?.id; focus.clearFocus() },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        // Controls dins del mapa: capes i pantalla completa
+                        Row(
+                            Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Surface(
+                                color = cs.surfaceContainerHigh.copy(alpha = 0.95f),
+                                shape = RoundedCornerShape(28.dp),
+                                shadowElevation = 4.dp,
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                GrupOpcions(
+                                    opcions = Capa.entries,
+                                    seleccionada = capa,
+                                    etiqueta = { it.etiqueta },
+                                    onTria = { capa = it; seleccionat = null },
+                                    modifier = Modifier.padding(4.dp),
+                                )
+                            }
+                            FilledTonalIconButton(
+                                onClick = { onPantallaCompleta(!complet) },
+                                modifier = Modifier.size(52.dp),
+                            ) {
+                                Icon(
+                                    if (complet) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen,
+                                    contentDescription = if (complet) "Surt de la pantalla completa" else "Mapa a pantalla completa",
+                                )
+                            }
+                        }
+                        if (complet) {
+                            Surface(
+                                color = cs.primary,
+                                shape = RoundedCornerShape(20.dp),
+                                shadowElevation = 4.dp,
+                                modifier = Modifier.align(Alignment.TopStart).padding(start = 12.dp, top = 76.dp),
+                            ) {
+                                Text(
+                                    "${milers(num)} de ${milers(total)} $unitat · ${percent(num, total)}",
+                                    color = cs.onPrimary,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
             // Suggeriments de cerca
             val resultats = remember(cerca, geo) { geo.cerca(cerca) }
-            if (resultats.isNotEmpty()) {
+            if (!complet && resultats.isNotEmpty()) {
                 Surface(
                     shape = RoundedCornerShape(24.dp),
                     color = cs.surfaceContainerHigh,

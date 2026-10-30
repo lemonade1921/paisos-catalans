@@ -7,6 +7,7 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import cat.paisoscatalans.data.Article
 import cat.paisoscatalans.data.Estat
 import cat.paisoscatalans.data.Geo
 import cat.paisoscatalans.data.JocDiari
@@ -57,6 +58,39 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             ids.forEach { if (it !in v) v[it] = avui }
             e.copy(visitats = v)
         }
+    }
+
+    fun canviaArticle(article: String) = viewModelScope.launch {
+        magatzem.actualitza { it.copy(article = Article.valid(article)) }
+    }
+
+    fun acabaBenvinguda(nom: String, article: String) = viewModelScope.launch {
+        magatzem.actualitza { it.copy(nom = nom.trim().take(40), article = Article.valid(article), introduit = true) }
+    }
+
+    /** Escriu la còpia de seguretat al fitxer que l'usuari ha triat. */
+    suspend fun exportaCopia(uri: Uri): String? = try {
+        val text = magatzem.copiaDeSeguretat()
+        withContext(Dispatchers.IO) {
+            getApplication<Application>().contentResolver.openOutputStream(uri, "wt")?.use {
+                it.write(text.toByteArray(Charsets.UTF_8))
+            } ?: error("no s'ha pogut obrir el fitxer")
+        }
+        null
+    } catch (e: Exception) {
+        "No s'ha pogut desar la còpia: ${e.localizedMessage}"
+    }
+
+    /** Llegeix i restaura una còpia de seguretat triada per l'usuari. */
+    suspend fun importaCopia(uri: Uri): String? = try {
+        val text = withContext(Dispatchers.IO) {
+            getApplication<Application>().contentResolver.openInputStream(uri)?.use {
+                it.readBytes().toString(Charsets.UTF_8)
+            } ?: error("no s'ha pogut obrir el fitxer")
+        }
+        magatzem.restaura(text)
+    } catch (e: Exception) {
+        "No s'ha pogut llegir la còpia: ${e.localizedMessage}"
     }
 
     fun canviaTema(tema: String) = viewModelScope.launch {

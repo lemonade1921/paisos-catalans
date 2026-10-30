@@ -93,8 +93,14 @@ fun MapaVectorial(
     Canvas(
         modifier
             .onSizeChanged {
+                val abans = camera.mida
                 camera.mida = it
-                if (!camera.inicialitzada) camera.encaixa(model.limits)
+                if (!camera.inicialitzada) {
+                    camera.encaixa(model.limits)
+                } else if (abans != IntSize.Zero) {
+                    // Manté el centre quan el mapa canvia de mida (p. ex. a pantalla completa)
+                    camera.origen += Offset((it.width - abans.width) / 2f, (it.height - abans.height) / 2f)
+                }
             }
             .pointerInput(model) {
                 detectTransformGestures { centre, pan, zoom, _ -> camera.transforma(centre, pan, zoom) }

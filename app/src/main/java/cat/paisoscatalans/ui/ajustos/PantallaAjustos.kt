@@ -1,5 +1,17 @@
 package cat.paisoscatalans.ui.ajustos
 
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.filled.Backup
+import androidx.compose.material.icons.filled.RestorePage
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material3.Button
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
+import java.time.LocalDate
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -67,10 +79,24 @@ fun PantallaAjustos(
     sistemaFosc: Boolean,
     onTema: (ModeTema) -> Unit,
     onEsborraTot: () -> Unit,
+    onExporta: suspend (Uri) -> String?,
+    onImporta: suspend (Uri) -> String?,
     onEnrere: () -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
     var confirmaEsborrar by remember { mutableStateOf(false) }
+    var perRestaurar by remember { mutableStateOf<Uri?>(null) }
+    val desa = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) scope.launch {
+            val error = onExporta(uri)
+            Toast.makeText(ctx, error ?: "Còpia de seguretat desada", Toast.LENGTH_LONG).show()
+        }
+    }
+    val obre = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) perRestaurar = uri
+    }
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -150,6 +176,32 @@ fun PantallaAjustos(
             }
         }
 
+        item { Capcalera(Icons.Filled.Backup, "Còpia de seguretat", Modifier.padding(top = 20.dp)) }
+        item {
+            Surface(color = cs.surfaceContainer, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        "Desa en un fitxer els llocs visitats, les partides i ratxes del joc (i per tant les insígnies), " +
+                            "el perfil i els ajustos. El pots guardar on vulguis i restaurar-lo en aquest o en un altre telèfon.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = cs.onSurfaceVariant,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { desa.launch("paisos-catalans-${LocalDate.now()}.json") }) {
+                            Icon(Icons.Filled.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Text("  Desa una còpia")
+                        }
+                        OutlinedButton(onClick = {
+                            obre.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
+                        }) {
+                            Icon(Icons.Filled.RestorePage, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Text("  Restaura")
+                        }
+                    }
+                }
+            }
+        }
+
         item { Capcalera(Icons.Filled.Lock, "Privadesa", Modifier.padding(top = 20.dp)) }
         item {
             Surface(color = cs.surfaceContainer, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
@@ -168,6 +220,24 @@ fun PantallaAjustos(
                 }
             }
         }
+    }
+
+    perRestaurar?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { perRestaurar = null },
+            title = { Text("Restaurar la còpia?") },
+            text = { Text("Les dades actuals se substituiran per les de la còpia de seguretat.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    perRestaurar = null
+                    scope.launch {
+                        val error = onImporta(uri)
+                        Toast.makeText(ctx, error ?: "Còpia restaurada", Toast.LENGTH_LONG).show()
+                    }
+                }) { Text("Restaura") }
+            },
+            dismissButton = { TextButton(onClick = { perRestaurar = null }) { Text("Cancel·la") } },
+        )
     }
 
     if (confirmaEsborrar) {

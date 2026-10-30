@@ -16,6 +16,7 @@ import android.provider.MediaStore
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.asAndroidPath
 import androidx.core.content.FileProvider
+import cat.paisoscatalans.data.Article
 import cat.paisoscatalans.data.Geo
 import cat.paisoscatalans.data.Progres
 import cat.paisoscatalans.ui.mapa.ModelMapa
@@ -71,7 +72,7 @@ object Compartir {
         }
     }
 
-    fun renderitza(geo: Geo, model: ModelMapa, p: Progres, nom: String, o: Opcions): Bitmap? {
+    fun renderitza(geo: Geo, model: ModelMapa, p: Progres, nom: String, article: String, o: Opcions): Bitmap? {
         if (o.format == Format.TEXT) return null
         val w = o.format.amplada
         val h = o.format.alcada
@@ -84,7 +85,7 @@ object Compartir {
             textSize = mida; this.color = color; typeface = tf; letterSpacing = espai
         }
         val n = p.municipisVisitats.size
-        val capcalera = if (nom.isNotBlank()) "EL MAPA DE ${nom.uppercase()}" else "PAÏSOS CATALANS"
+        val capcalera = if (nom.isNotBlank()) "EL MAPA ${Article.genitiu(nom, article).uppercase()}" else "PAÏSOS CATALANS"
 
         if (o.format == Format.HISTORIA) {
             c.drawText(capcalera, 96f, 170f, paint(42f, BLANC, semi, 0.12f))

@@ -141,3 +141,36 @@ fun percent(fet: Int, total: Int): String =
 
 /** Formata nombres amb punt de milers, a la catalana: 1.783 */
 fun milers(n: Int): String = "%,d".format(n).replace(',', '.')
+
+/** Tria de l'article personal amb una previsualització de com sortirà el nom. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+fun SelectorArticle(
+    nom: String,
+    article: String,
+    onTria: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val cs = MaterialTheme.colorScheme
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Article personal", style = MaterialTheme.typography.titleSmall)
+        androidx.compose.foundation.layout.FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            cat.paisoscatalans.data.Article.opcions.forEach { (clau, etiqueta) ->
+                androidx.compose.material3.FilterChip(
+                    selected = article == clau,
+                    onClick = { onTria(clau) },
+                    label = { Text(etiqueta) },
+                )
+            }
+        }
+        val mostra = nom.trim().ifEmpty { "Maria" }
+        Text(
+            "Així sortirà: «El mapa ${cat.paisoscatalans.data.Article.genitiu(mostra, article)}»",
+            style = MaterialTheme.typography.bodySmall,
+            color = cs.onSurfaceVariant,
+        )
+    }
+}

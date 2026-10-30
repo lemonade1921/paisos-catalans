@@ -72,6 +72,7 @@ import cat.paisoscatalans.data.JocDiari
 import cat.paisoscatalans.data.Progres
 import cat.paisoscatalans.data.Ratxa
 import cat.paisoscatalans.ui.Seccio
+import cat.paisoscatalans.ui.SelectorArticle
 
 @Composable
 internal fun formaDe(c: Categoria): Shape = when (c) {
@@ -99,6 +100,7 @@ fun PantallaPerfil(
     onFoto: (Uri) -> Unit,
     onTreuFoto: () -> Unit,
     onNom: (String) -> Unit,
+    onArticle: (String) -> Unit,
     onComparteix: () -> Unit,
     onAjustos: () -> Unit,
 ) {
@@ -180,6 +182,7 @@ fun PantallaPerfil(
                     },
                     modifier = Modifier.fillMaxWidth(),
                 )
+                SelectorArticle(nom, estat.article, onTria = onArticle, modifier = Modifier.fillMaxWidth().padding(top = 12.dp))
             }
         }
 

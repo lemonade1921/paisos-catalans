@@ -1,7 +1,7 @@
 # Països Catalans
 
 App per a Android per portar el compte dels **municipis**, **comarques** i **vegueries** que has visitat
-als territoris de parla catalana: el Principat de Catalunya (sense la Vall d'Aran), Catalunya Nord (sense la
+als territoris de parla catalana: el Principat de Catalunya (sense la Vall d'Aran), Andorra, Catalunya Nord (sense la
 Fenolleda), la Franja de Ponent, el País Valencià (municipis de predomini lingüístic valencià), el Carxe,
 les Illes Balears i l'Alguer.
 Inclou un joc diari per endevinar un municipi i insígnies per anar-ne guanyant.
@@ -10,14 +10,17 @@ Disseny: Material 3 Expressive (Jetpack Compose). Tota l'app és en català.
 
 ## Funcions
 
-- **Mapa** vectorial amb tres capes (Municipis / Comarques / Vegueries), zoom i cerca.
-  Toca un municipi per marcar-lo com a visitat.
+- **Benvinguda** que presenta l'app, demana el nom i l'article personal (el, en, la, na, l', n') i permet
+  restaurar una còpia de seguretat o començar de zero.
+- **Mapa** vectorial amb tres capes (Municipis / Comarques / Vegueries) dins del mateix mapa, zoom, cerca
+  i mode de pantalla completa. Toca un municipi per marcar-lo com a visitat.
 - **Progrés** per territori i per comarca, amb la llista de municipis de cada comarca.
 - **Joc diari: el municipi del dia.** Sis intents; cada resposta mostra la distància, la direcció i la proximitat.
   Pistes de territori i comarca. Ratxa de dies seguits jugant.
 - **Perfil** amb nom, foto i **insígnies**: municipis, comarques, vegueries, territoris i ratxes del joc.
   Toca una insígnia per veure-la com una medalla en 3D que pots fer girar.
-- **Ajustos**: aparença Segueix el sistema / Clar / Fosc / OLED (negre pur).
+- **Ajustos**: aparença Segueix el sistema / Clar / Fosc / OLED (negre pur) i **còpia de seguretat**:
+  desa i restaura en un fitxer JSON els llocs visitats, les partides (ratxes i insígnies), el perfil i els ajustos.
 - **Comparteix** una imatge (format història o publicació) o un text a Instagram Stories, Signal, Molly,
   Mastodon i Bluesky, o desa la imatge a la galeria.
 
@@ -46,7 +49,9 @@ Els límits provenen d'**OpenStreetMap** (© col·laboradors d'OpenStreetMap, ll
    - Franja de Ponent: llista fixa de 61 municipis catalanoparlants (Ribagorça, Llitera, Baix Cinca, Matarranya).
    - País Valencià: comarques d'OSM. Se n'exclouen els municipis de predomini lingüístic castellà
      (art. 36 de la Llei 4/1983 d'ús i ensenyament del valencià).
-   - El Carxe (Múrcia): no té municipi propi; s'hi inclou com una sola àrea amb un límit aproximat.
+   - Andorra: les 7 parròquies fan de municipis.
+   - El Carxe (Múrcia): no té municipi propi. Es calcula com la part dels termes de Iecla, Jumella i Favanella
+     que toca el Pinós i l'Alguenya (a menys d'uns 10 km d'aquests dos municipis valencians).
    - Illes Balears: cada illa fa de comarca (Mallorca, Menorca, Eivissa, Formentera).
    - L'Alguer: un sol municipi.
    Els municipis que no es poden assignar prenen la comarca del municipi veí més proper (l'script ho avisa).

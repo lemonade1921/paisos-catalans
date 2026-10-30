@@ -80,6 +80,7 @@ fun FullCompartir(
     model: ModelMapa,
     progres: Progres,
     nom: String,
+    article: String,
     onTanca: () -> Unit,
 ) {
     val ctx = LocalContext.current
@@ -93,9 +94,9 @@ fun FullCompartir(
     val opcions = Opcions(format, ambMapa, ambComarques)
     val text = remember(progres, ambComarques) { Compartir.text(geo, progres, ambComarques) }
 
-    LaunchedEffect(opcions, progres, nom) {
+    LaunchedEffect(opcions, progres, nom, article) {
         generant = true
-        imatge = withContext(Dispatchers.Default) { Compartir.renderitza(geo, model, progres, nom, opcions) }
+        imatge = withContext(Dispatchers.Default) { Compartir.renderitza(geo, model, progres, nom, article, opcions) }
         generant = false
     }
     LaunchedEffect(format) {

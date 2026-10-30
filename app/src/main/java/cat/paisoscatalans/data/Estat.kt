@@ -1,6 +1,7 @@
 package cat.paisoscatalans.data
 
 import android.content.Context
+import android.util.Base64
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,6 +24,10 @@ data class Partida(
 /** Tot el que l'usuari genera. Es desa en un fitxer JSON privat de l'app. */
 data class Estat(
     val nom: String = "",
+    /** Article personal: "", "el", "en", "la", "na", "l'" o "n'" (vegeu [Article]) */
+    val article: String = "",
+    /** S'ha completat la pantalla de benvinguda */
+    val introduit: Boolean = false,
     /** Aparença: "sistema", "clar", "fosc" o "oled" */
     val tema: String = "sistema",
     val teFoto: Boolean = false,
@@ -37,6 +42,8 @@ data class Estat(
  * Emmagatzematge local. Res no surt del dispositiu: el fitxer viu a
  * l'emmagatzematge intern de l'app i les còpies de seguretat estan desactivades.
  */
+private const val FORMAT_APP = "paisos-catalans"
+
 class Magatzem(private val context: Context) {
     private val fitxer = File(context.filesDir, "estat.json")
     val fitxerFoto = File(context.filesDir, "perfil.jpg")
@@ -78,6 +85,50 @@ class Magatzem(private val context: Context) {
         }
     }
 
+    /**
+     * Còpia de seguretat completa en JSON: perfil (amb la foto en base64), aparença,
+     * llocs visitats i totes les partides del joc (d'on surten les ratxes i les insígnies).
+     */
+    suspend fun copiaDeSeguretat(): String = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val o = escriu(_estat.value)
+            o.put("app", FORMAT_APP)
+            o.put("format", 1)
+            o.put("creada", System.currentTimeMillis())
+            if (fitxerFoto.exists()) {
+                o.put("foto", Base64.encodeToString(fitxerFoto.readBytes(), Base64.NO_WRAP))
+            }
+            o.toString(2)
+        }
+    }
+
+    /** Restaura una còpia. Retorna null si ha anat bé o un missatge d'error. */
+    suspend fun restaura(text: String): String? = withContext(Dispatchers.IO) {
+        val o = try {
+            JSONObject(text)
+        } catch (_: Exception) {
+            return@withContext "El fitxer no és una còpia vàlida"
+        }
+        if (o.optString("app") != FORMAT_APP) return@withContext "Aquest fitxer no és una còpia de Països Catalans"
+        mutex.withLock {
+            val nou = llegeix(o).copy(introduit = true)
+            val foto = o.optString("foto")
+            if (foto.isNotEmpty()) {
+                try {
+                    fitxerFoto.writeBytes(Base64.decode(foto, Base64.DEFAULT))
+                } catch (_: Exception) {
+                    fitxerFoto.delete()
+                }
+            } else {
+                fitxerFoto.delete()
+            }
+            val ambFoto = nou.copy(teFoto = fitxerFoto.exists(), fotoVersio = _estat.value.fotoVersio + 1)
+            fitxer.writeText(escriu(ambFoto).toString())
+            _estat.value = ambFoto
+        }
+        null
+    }
+
     private fun llegeix(o: JSONObject): Estat {
         val vis = mutableMapOf<String, Long>()
         o.optJSONObject("visitats")?.let { v -> v.keys().forEach { vis[it] = v.getLong(it) } }
@@ -96,6 +147,9 @@ class Magatzem(private val context: Context) {
         }
         return Estat(
             nom = o.optString("nom"),
+            article = Article.valid(o.optString("article")),
+            // Un fitxer d'estat d'una versió anterior vol dir que l'app ja s'ha fet servir
+            introduit = o.optBoolean("introduit", true),
             tema = o.optString("tema", "sistema"),
             fotoVersio = o.optLong("fotoVersio"),
             visitats = vis,
@@ -106,6 +160,8 @@ class Magatzem(private val context: Context) {
     private fun escriu(e: Estat): JSONObject = JSONObject().apply {
         put("versio", 1)
         put("nom", e.nom)
+        put("article", e.article)
+        put("introduit", e.introduit)
         put("tema", e.tema)
         put("fotoVersio", e.fotoVersio)
         put("visitats", JSONObject().apply { e.visitats.forEach { (k, v) -> put(k, v) } })
